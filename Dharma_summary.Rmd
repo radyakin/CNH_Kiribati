@@ -11,8 +11,9 @@ output:
 ```{r, echo=FALSE}
 # Background data and 
 library(tidyverse)
+library(knitr)
 # Load data
-data_raw <- read.csv( "Data/project_7458_kiribati_named.csv", na.strings='.') 
+data_raw <- read.csv("Data/project_7458_kiribati_named.csv", na.strings='.') 
 
 # When column A “FactID” = the following, please delete the record:
 FactID_remove <- c(8928972, 8928976, 8929006, 8930961, 8931112, 8931114, 8931115, 8931118, 8932937, 8933375, 8933391, 8936960,
@@ -189,8 +190,12 @@ write.csv(data.frame(place_of_birth = place_of_birth), "Outputs/place_of_birth.c
 
 ```{r, echo=FALSE}
 # Summarize L1_q206_what_rank_would_you_give_mutton_flaps:L1_q195_what_rank_would_you_give_tuna
-food_ranks <- select(data_clean, L1_q206_what_rank_would_you_give_mutton_flaps:L1_q195_what_rank_would_you_give_tuna)
-colMeans(food_ranks, na.rm = TRUE)
+food_ranks <- data_clean %>% 
+  select(L1_q206_what_rank_would_you_give_mutton_flaps:L1_q195_what_rank_would_you_give_tuna) 
+
+kable(colMeans(food_ranks, na.rm = TRUE), col.names = "Ave. Rank")
+
+
 ```
 
 ## Food preferences by age, sex
