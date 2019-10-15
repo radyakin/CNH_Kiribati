@@ -8,7 +8,8 @@ output:
     df_print: paged
 ---
 
-```{r, echo=FALSE}
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 # Background data and 
 library(tidyverse)
 library(knitr)
@@ -23,8 +24,8 @@ FactID_remove <- c(8928972, 8928976, 8929006, 8930961, 8931112, 8931114, 8931115
 
 # Functions
 clean.named <- function(DATA, FactID_remove){
-  DATA$L1_q16_date_of_interview <- as.Date(DATA$L1_q16_date_of_interview)
-  DATA$L1_q1_dob <- as.Date(DATA$L1_q1_dob)
+  DATA$L1_q16_date_of_interview <- as.Date(DATA$L1_q16_date_of_interview, tryFormats = c("%m/%d/%y"))
+  DATA$L1_q1_dob <- as.Date(DATA$L1_q1_dob, tryFormats = c("%m/%d/%y"))
   
   # Columns Q – Z will only have one answer per row to locate the community, 
   # could you collapse this so it just has this information in one column?
@@ -57,18 +58,23 @@ clean.named <- function(DATA, FactID_remove){
     # When column A “FactID” = the following, please delete the record:
     filter(!(fact_0_id %in% FactID_remove)) %>%
     # In column DC “deleted”, when TRUE, please delete/hide from analysis
-    filter(deleted == "False") %>%
+    filter(deleted == FALSE) %>%
     # Use column K and L to calculate age days
     mutate(age_days = difftime(L1_q16_date_of_interview, L1_q1_dob, units="days")) %>%
+    
+    # Calculate age groups
     mutate(age_group = case_when(
-      age_days <= 7305 ~ "under 20",
-      (age_days > 7305 & age_days <= 14610) ~ "20-40",
-      age_days > 14610 ~ "over 40")) %>%
+      (age_days <= (12*365.25)) ~ "under 12",
+      (age_days > (12*365.25) & age_days <= (20*365.25)) ~ "12-20",
+      (age_days > (20*365.25) & age_days <= (40*365.25)) ~ "20-40",
+      (age_days > (40*365.25)) ~ "over 40")) %>%
+    
     # Column BY: Create a fever category to indicate no fever <100.4 and fever > or = 100.4
     mutate(fever_YN = case_when(
       L1_q229_temperature < 100.4 ~ "N", 
       L1_q229_temperature >= 100.4 ~ "Y"
     )) %>%
+    
     # Columns BZ and CA: Categorize blood pressure
     # Blood pressure:
     # - Normal: Less than 120/80 mm Hg;
@@ -77,68 +83,79 @@ clean.named <- function(DATA, FactID_remove){
     # - Stage 2: Systolic at least 140 or diastolic at least 90 mm Hg;
     # - Hypertensive crisis: Systolic over 180 and/or diastolic over 120
     mutate(BloodPressure_status = case_when(
-      (L1_q239_systolic <= 120 & L1_q240_diastolic <= 80) ~ "Normal",
-      (L1_q239_systolic > 120 & L1_q239_systolic < 129 & L1_q240_diastolic < 80) ~ "Elevated",
+      (L1_q239_systolic < 120 & L1_q240_diastolic < 80) ~ "Normal",
+      (L1_q239_systolic >= 120 & L1_q239_systolic < 129 & L1_q240_diastolic <= 80) ~ "Elevated",
       (L1_q239_systolic >= 130 & L1_q239_systolic < 140 | 
          L1_q240_diastolic >= 80 & L1_q240_diastolic <= 89) ~ "Stage 1",
       (L1_q239_systolic >= 140 & L1_q239_systolic <= 180 |
          L1_q240_diastolic >= 90 & L1_q240_diastolic <= 120) ~ "Stage 2",
       (L1_q239_systolic >= 180 | L1_q240_diastolic >= 120) ~ "Hypertensive Crisis"
     )) %>%
+    
     # Column CC for glucose
     # - Between 3.9-7.2 mmol/L is normal regardless of column BW. Categorize as normal
     # - Above 7.2 if BW is before 4am (ie evening before) is too high. Categorize as hyperglycemic.
     # - Less than 10.0mmol/L is normal if column BW is between 4am -7am. Above this and categorize as hyperglycemic.
     # - Below 3.9, categorize as hypoglycemic.
-    mutate(Glucose_status = case_when(
-      ((L1_q63_glucose > 7.21 & L1_q227_lastmealtime %in% c("5pm", "6pm", "7pm", "8pm", "9pm", 
-                                                                  "10pm", "11pm", "12am", "1am", "2am",
-                                                                  "3am")) | 
-         (L1_q63_glucose > 10 & L1_q227_lastmealtime %in% c("4am", "5am", "6am", "7am"))) ~ "Hyperglycemic",
-      (L1_q63_glucose > 3.9 & L1_q63_glucose < 7.2) ~ "Normal",
-      L1_q63_glucose < 3.9 ~ "Hypoglycemic"
-      )) %>%
-    
+    #mutate(Glucose_status = case_when(
+    #  ((L1_q63_glucose > 7.21 & L1_q227_lastmealtime %in% c("5pm", "6pm", "7pm", "8pm", "9pm", 
+    #                                                              "10pm", "11pm", "12am", "1am", "2am",
+    #                                                              "3am")) | 
+    #     (L1_q63_glucose > 10 & L1_q227_lastmealtime %in% c("4am", "5am", "6am", "7am"))) ~ "Hyperglycemic",
+    #  (L1_q63_glucose > 3.9 & L1_q63_glucose < 7.2) ~ "Normal",
+    #  L1_q63_glucose < 3.9 ~ "Hypoglycemic"
+    #  )) %>%
+    # Data recorded as mg/dL. Use Hypoglycemia when <70 mg/dL, Normal 70 - 180 mg/dL, Hyperglycemia when >180mg/dL 
+    # (don't have to do last meal for the moment)
+  mutate(Glucose_status = case_when(
+    age_days < (12*365.25) ~ "under 12",
+    (age_days >= (12*365.25) & L1_q63_glucose >= 180) ~ "Hyperglycemic",
+    (age_days >= (12*365.25) & L1_q63_glucose > 70 & L1_q63_glucose < 180) ~ "Normal",
+    (age_days >= (12*365.25) & L1_q63_glucose <= 70) ~ "Hypoglycemic"
+    )) %>%
+  
     # Calculate anemia status (refer to table)
   mutate(anemia_status = case_when(
     ((age_days < (5*365.25) & L1_q234_measure_hemoglobin_g_dl > 11) |
        (age_days >= (5*365.25) & age_days < (12*365.25) & L1_q234_measure_hemoglobin_g_dl > 11.5) |
        (age_days >= (12*365.25) & age_days < (15*365.25) & L1_q234_measure_hemoglobin_g_dl > 12) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl > 12) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl > 11) |
-       (age_days >= (15*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl > 13))~ "non-anemic",
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl > 12) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl > 11) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl > 13))~ "non-anemic",
     
     ((age_days < (5*365.25) & L1_q234_measure_hemoglobin_g_dl >= 10 & L1_q234_measure_hemoglobin_g_dl < 11) |
        (age_days >= (5*365.25) & age_days < (12*365.25) & L1_q234_measure_hemoglobin_g_dl >= 11 & L1_q234_measure_hemoglobin_g_dl < 11.5) |
        (age_days >= (12*365.25) & age_days < (15*365.25) & L1_q234_measure_hemoglobin_g_dl >= 11 & L1_q234_measure_hemoglobin_g_dl < 12) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 11 & L1_q234_measure_hemoglobin_g_dl < 12) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 10 & L1_q234_measure_hemoglobin_g_dl < 11) |
-       (age_days >= (15*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl >= 11 & L1_q234_measure_hemoglobin_g_dl < 13))~ "mild",
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 11 & L1_q234_measure_hemoglobin_g_dl < 12) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 10 & L1_q234_measure_hemoglobin_g_dl < 11) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl >= 11 & L1_q234_measure_hemoglobin_g_dl < 13))~ "mild",
     
         ((age_days < (5*365.25) & L1_q234_measure_hemoglobin_g_dl >= 7 & L1_q234_measure_hemoglobin_g_dl < 10) |
        (age_days >= (5*365.25) & age_days < (12*365.25) & L1_q234_measure_hemoglobin_g_dl >= 8 & L1_q234_measure_hemoglobin_g_dl < 11) |
        (age_days >= (12*365.25) & age_days < (15 *365.25) & L1_q234_measure_hemoglobin_g_dl >= 8 & L1_q234_measure_hemoglobin_g_dl < 11) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 8 & L1_q234_measure_hemoglobin_g_dl < 11) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 7 & L1_q234_measure_hemoglobin_g_dl < 10) |
-       (age_days >= (15*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl >= 8 & L1_q234_measure_hemoglobin_g_dl < 11))~ "moderate",
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 8 & L1_q234_measure_hemoglobin_g_dl < 11) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl >= 7 & L1_q234_measure_hemoglobin_g_dl < 10) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl >= 8 & L1_q234_measure_hemoglobin_g_dl < 11))~ "moderate",
     
         ((age_days < (5*365.25) & L1_q234_measure_hemoglobin_g_dl < 7) |
        (age_days >= (5*365.25) & age_days < (12*365.25) & L1_q234_measure_hemoglobin_g_dl < 8) |
        (age_days >= (12*365.25) & age_days < (15 *365.25) & L1_q234_measure_hemoglobin_g_dl < 8) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl < 8) |
-       (age_days >= (15*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl < 7) |
-       (age_days >= (15*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl < 8))~ "severe"
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 != "Pregnant" & L1_q234_measure_hemoglobin_g_dl < 8) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "F" & L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant" & L1_q234_measure_hemoglobin_g_dl < 7) |
+       (age_days >= (15*365.25) & age_days < (50*365.25) & L1_q3_gender == "M" & L1_q234_measure_hemoglobin_g_dl < 8))~ "severe", 
+    age_days >= (50*365.25) ~ "over 50"
   )) %>% 
     
-    # Columns CG, CH, and CJ
+    # Columns CG, CH, and CJ cholesterol
     # The following levels are considered to be "good" in healthy people:
     # -	Total cholesterol: Levels below 200 mg/dL (5.2 mmol/L)
     # -	LDL cholesterol: Levels below 130 mg/dL (3.4 mmol/L)
     # -	HDL cholesterol: Levels above 40 mg/dL (1 mmol/L) in men and above 50 mg/dL (1.3 mmol/L) in women
     # If above the TC or LDL, or below in the HDL, then please indicate cholesterol risk.
     mutate(cholesterol_status = case_when(
-      (L1_q60_tc < 200 & L1_q61_hdl > 40 & L1_q64_ldl < 130) ~ "good",
-      (L1_q60_tc >= 200 | L1_q61_hdl <= 40 | L1_q64_ldl >= 130) ~ "at risk"
+      age_days < (12*365.25) ~ "under 12",
+      (age_days >= (12*365.25) & L1_q60_tc < 200 & L1_q61_hdl > 40 & L1_q64_ldl < 130) ~ "Normal",
+      (age_days >= (12*365.25) & L1_q60_tc >= 200 | L1_q61_hdl <= 40 | L1_q64_ldl >= 130) ~ "At risk"
     )) %>% 
     
     # Column CI for triglycerides
@@ -149,11 +166,12 @@ clean.named <- function(DATA, FactID_remove){
     # (4) moderate hypertriglyceridemia triglycerides (200–499 mg/dL); 
     # (5) severe hypertriglyceridemia triglycerides (≥500 mg/dL)
     mutate(triglycerides_status = case_when(
-    L1_q62_triglycerides < 100 ~ "low-normal",
-    (L1_q62_triglycerides >= 100 & L1_q62_triglycerides < 150) ~ "high-normal",
-    (L1_q62_triglycerides >= 150 & L1_q62_triglycerides < 200) ~ "borderline hypertriglyceridemia",
-    (L1_q62_triglycerides >= 200 & L1_q62_triglycerides < 500) ~ "moderate hypertriglyceridemia",
-    (L1_q62_triglycerides >= 500) ~ "severe hypertriglyceridemia"
+      age_days < (12*365.25) ~ "under 12",
+      (age_days >= (12*365.25) & L1_q62_triglycerides < 100) ~ "Low-normal",
+      (age_days >= (12*365.25) & L1_q62_triglycerides >= 100 & L1_q62_triglycerides < 150) ~ "High-normal",
+      (age_days >= (12*365.25) & L1_q62_triglycerides >= 150 & L1_q62_triglycerides < 200) ~ "Borderline hypertriglyceridemia",
+      (age_days >= (12*365.25) & L1_q62_triglycerides >= 200 & L1_q62_triglycerides < 500) ~ "Moderate hypertriglyceridemia",
+      (age_days >= (12*365.25) & L1_q62_triglycerides >= 500) ~ "Severe hypertriglyceridemia"
     )) %>%
     
     # Column CN for diabetes
@@ -161,18 +179,46 @@ clean.named <- function(DATA, FactID_remove){
     # Hemoglobin A1c levels between 5.7% and 6.4% mean you have a higher chance of getting diabetes. 
     # Levels of 6.5% or higher mean you have diabetes. Please categorize as such. 
     mutate(diabetes_status = case_when(
-      L1_q59_diabetes < 5.7 ~ "normal",
-      (L1_q59_diabetes >= 5.7 & L1_q59_diabetes < 6.5) ~ "at risk",
-      L1_q59_diabetes >= 6.5 ~ "diabetic"
+      age_days < (12*365.25) ~ "under 12",
+      (age_days >= (12*365.25) & L1_q59_diabetes < 5.7) ~ "Normal",
+      (age_days >= (12*365.25) & L1_q59_diabetes >= 5.7 & L1_q59_diabetes < 6.5) ~ "At risk",
+      (age_days >= (12*365.25) &L1_q59_diabetes >= 6.5) ~ "Diabetic"
     ))
+  
+  CLEAN$age_group <- ordered(CLEAN$age_group, levels = c("under 12", "12-20", "20-40", "over 40"))
   
   CLEAN$fever_YN <- as.factor(CLEAN$fever_YN)
   CLEAN$BloodPressure_status <- as.factor(CLEAN$BloodPressure_status)
+  CLEAN$BloodPressure_status <- ordered(CLEAN$BloodPressure_status, levels = c(
+    "Normal", "Elevated", "Stage 1", "Stage 2", "Hypertensive Crisis"
+  ))
+  
   CLEAN$Glucose_status <- as.factor(CLEAN$Glucose_status)
+  CLEAN$Glucose_status <- ordered(CLEAN$Glucose_status, levels = c(
+    "Normal", "Hypoglycemic", "Hyperglycemic", "under 12"
+    ))
+
   CLEAN$anemia_status <- as.factor(CLEAN$anemia_status)
+  CLEAN$anemia_status <- ordered(CLEAN$anemia_status, levels = c(
+    "non-anemic", "mild", "moderate", "severe", "over 50"
+  ))
+  
   CLEAN$cholesterol_status <- as.factor(CLEAN$cholesterol_status)
+  CLEAN$cholesterol_status <- ordered(CLEAN$cholesterol_status, levels = c(
+    "Normal", "At risk", "under 12"
+  ))
+  
   CLEAN$triglycerides_status <- as.factor(CLEAN$triglycerides_status)
+  CLEAN$triglycerides_status <- ordered(CLEAN$triglycerides_status, levels = c(
+    "Low-normal", "High-normal", "Borderline hypertriglyceridemia", 
+    "Moderate hypertriglyceridemia", "Severe hypertriglyceridemia" , "under 12"
+  ))
+
+  
   CLEAN$diabetes_status <- as.factor(CLEAN$diabetes_status)
+  CLEAN$diabetes_status <- ordered(CLEAN$diabetes_status, levels = c(
+    "Normal", "At risk", "Diabetic", "under 12"
+  ))
   
     return(CLEAN)
 }
@@ -186,87 +232,151 @@ place_of_birth <- unique(data_clean$L1_q236_place_of_birth)
 write.csv(data.frame(place_of_birth = place_of_birth), "Outputs/place_of_birth.csv", row.names = FALSE)
 ```
 
-## Food preference ranks
+## Notes on the raw data
 
-```{r, echo=FALSE}
+6) Is there a way to look at how many "complete surveys" have been done by checking some of the critical info and seeing whether it has been finished or not? This will help us to have a total sample size finished so far to then calculate how many NAs in a given other table are strange.
+- Yes, but we will just have to define what a "complete survey" would look like
+
+ii. Missing age and sex as I mentioned is very concerning because that should have been collected mandatorily for every interview. Could you check to see where this is blank N/A for age and sex and where there is no information in the interview or if there is info there. I really need to figure this out. Very strange.
+
+There are `r sum(is.na(data_clean$L1_q3_gender))` NAs in the gender column of the raw data (after the deleted = TRUE rows have been deleted). Is there any chance that more of the rows should be deleted? The rows with NA in gender tend to have many NAs in them.  
+
+There are `r sum(is.na(data_clean$L1_q3_gender))` NA's in the gender column.
+
+We can go through and calculate this for any column or combo of colunms. I am just not sure how many NAs we expect. Let's discuss this in person. 
+
+## The number of completed interviews by sex and age categories
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+age_sex <- data_clean %>%
+  group_by(age_group, L1_q3_gender) %>%
+  tally()
+colnames(age_sex) <- c("Age", "Sex", "Count")
+kable(age_sex)
+
+```
+
+## Pregnant and lactating women
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+n.lactating <- sum(data_clean$L1_q51_breastfeeding_pregnant_lactating.000 == "Lactating", na.rm = TRUE)
+n.pregnant <- sum(data_clean$L1_q51_breastfeeding_pregnant_lactating.001 == "Pregnant", na.rm = TRUE)
+n.breastfeeding <- sum(data_clean$L1_q51_breastfeeding_pregnant_lactating.003 == "Breastfeeding", na.rm = TRUE)
+n.F12to40 <- age_sex %>% 
+  filter(Sex == "F" & Age %in% c("12-20", "20-40"))
+n.F12to40 <-  sum(n.F12to40$Count)
+```
+The percent of lactacting women between the ages of 12 and 40 is `r round(100*(n.lactating/n.F12to40))`%. 
+The percent of pregnant women between the ages of 12 and 40 is `r round(100*(n.pregnant/n.F12to40))`%. 
+The percent of breastfeeding women between the ages of 12 and 40 is `r round(100*(n.breastfeeding/n.F12to40))`%. 
+
+Double check breastfeeding and lactating... I think I made a mistake because lactating should only refer to women (so age/sex cats I specified) and the breastfeeding should only refer to children who are doing that. But, given the numbers, something makes me think the question is being asked incorrectly, or the classification is being done strangely... any thoughts?
+- I am not sure if I understand this correctly, so I haven't changed it yet. I can show you when we meet in person (this will be easy to straighten out). 
+
+## Food preference ranks (1 = most preferred; 5 = least preferred)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 # Summarize L1_q206_what_rank_would_you_give_mutton_flaps:L1_q195_what_rank_would_you_give_tuna
 food_ranks <- data_clean %>% 
   select(L1_q206_what_rank_would_you_give_mutton_flaps:L1_q195_what_rank_would_you_give_tuna) 
+colnames(food_ranks) <- c("Mutton flaps", "Beef", "Pork", "Turkey tails", "Chicken", 
+                    "Spam", "Canned corn beef", "Tin fish", "Reef fish (e.g., snapper)", 
+                    "Mackerel", "Tuna")
 
-kable(colMeans(food_ranks, na.rm = TRUE), col.names = "Ave. Rank")
+kable(sort(round(colMeans(food_ranks, na.rm = TRUE), digits = 2)), col.names = "Ave. Rank")
 
 
 ```
 
 ## Food preferences by age, sex
 
-```{r, echo=FALSE}
-data_clean %>% 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+tab <- data_clean %>% 
   group_by(L1_q3_gender, age_group) %>%
   select(L1_q3_gender, age_group, L1_q206_what_rank_would_you_give_mutton_flaps:L1_q195_what_rank_would_you_give_tuna) %>%
-  summarise_all(funs(mean(.,na.rm = TRUE)))
+  summarise_all(funs(round(mean(.,na.rm = TRUE), digits = 2)))
+
+colnames(tab) <- c("Sex", "Age", "Mutton flaps", "Beef", "Pork", "Turkey tails", "Chicken", 
+                    "Spam", "Canned corn beef", "Tin fish", "Reef fish (e.g., snapper)", 
+                    "Mackerel", "Tuna")
+
+kable(t(tab)) 
 
 ```
 
 ## Fever summary
 
-```{r, echo=FALSE,warning=FALSE, message=FALSE}
-data_clean %>% 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+tab <- data_clean %>% 
   group_by(fever_YN) %>%
   count()
 
+kable(tab)
 ```
+
+i. For fever, this is normal because we have been missing thermometers for lots of events, and I think some of the readings are in Celsius and so need to be converted as well. 
+- The weird ones I see are 35 (which is probably C) and 67 (which doesn't make sense for either F or C). If there is a cutoff point, I could add in a line that says if temp is below that value, then convert to F. 
 
 ## Blood Pressure summary
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-data_clean %>% 
+tab <- data_clean %>% 
   group_by(BloodPressure_status) %>%
   count()
 
+kable(tab)
 ```
 
 ## Glucose summary
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-data_clean %>% 
+tab <- data_clean %>% 
+  filter(Glucose_status != "under 12") %>%
   group_by(Glucose_status) %>%
   count()
 
+kable(tab)
 ```
 
 ## Anemia summary
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-data_clean %>% 
+
+tab <- data_clean %>% 
+  filter(anemia_status != "over 50") %>%
   group_by(anemia_status) %>%
   count()
 
+kable(tab)
 ```
 
-## Choleterol summary
+## Cholesterol summary
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-data_clean %>% 
+tab <- data_clean %>% 
+  filter(cholesterol_status != "under 12") %>%
   group_by(cholesterol_status) %>%
   count()
 
+kable(tab)
 ```
 
 ## Trigycerides summary
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-data_clean %>% 
+tab <- data_clean %>% 
+  filter(triglycerides_status != "under 12") %>%
   group_by(triglycerides_status) %>%
   count()
 
+kable(tab)
 ```
 
 ## Diabetes summary
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-data_clean %>% 
+tab <- data_clean %>% 
+  filter(diabetes_status != "under 12") %>%
   group_by(diabetes_status) %>%
   count()
 
+kable(tab)
 ```

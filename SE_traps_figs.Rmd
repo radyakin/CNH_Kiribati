@@ -1,0 +1,70 @@
+---
+title: "SE_traps_figs"
+author: "Jessica Gephart"
+date: "10/15/2019"
+output: pdf_document
+---
+
+```{r, echo=FALSE}
+# Load packages and raw data
+
+library(tidyverse)
+library(ggplot2)
+library(countrycode)
+
+trade_raw <- read.csv("Data/FoodBalanceSheets_E_All_Data.csv")
+health_raw <- read.csv("Data/SIDS_NCDs.csv")
+reefs_raw <- read.csv() # Need data from Jacob
+
+```
+
+
+```{r, echo=FALSE}
+# Clean raw data and create single DF
+
+# Clean trade data
+trade_clean <- trade_raw %>% 
+  filter(Element %in% c("Import Quantity", "Domestic supply quantity")) %>%
+  select(-c("Element.Code")) %>% 
+  select(-ends_with("F")) %>%
+  gather("year", "value", Y1961:Y2013) %>%
+  spread(Element, value) 
+trade_clean$`Domestic supply quantity`<- as.numeric(trade_clean$`Domestic supply quantity`)
+trade_clean$`Import Quantity` <- as.numeric(trade_clean$`Import Quantity`)
+
+trade_clean <- trade_clean %>%
+  group_by(Area.Code, Area, Unit, year) %>%
+  summarise(Total_supply = sum(`Domestic supply quantity`, na.rm = TRUE), Total_import = sum(`Import Quantity`, na.rm = TRUE)) %>% 
+  mutate(Percent_import = 100*(Total_import/Total_supply))
+
+trade_clean$year <- str_remove(trade_clean$year, pattern = "Y")
+trade_clean$year <- as.numeric(trade_clean$year)
+trade_clean$country.code <- countrycode(trade_clean$Area, origin = "country.name", destination = "iso3c")
+trade_clean <- trade_clean %>%
+  filter(is.na(country.code) == FALSE)
+
+# CLean health data
+health_raw$country.code <- countrycode(health_raw$location_name, origin = "country.name", destination = "iso3c")
+health_clean <- health_raw %>%
+  filter(is.na(country.code) == FALSE) %>%
+  filter(metric_name == "Percent") %>%
+  select(country.code, location_name, year, measure_name, cause_name, val) %>%
+  spread(measure_name, val)
+
+
+# Merge data
+df <- inner_join(health_clean, trade_clean, by = c("year", "country.code"))
+
+```
+
+```{r, echo=FALSE}
+# Exploratory figures
+df_plot <- df %>%
+  filter(year == 2013) %>%
+  filter(cause_name == "Cardiovascular diseases")
+
+ggplot(df_plot, aes(x = Percent_import, y = Prevalence)) +
+  geom_point()
+
+
+```
