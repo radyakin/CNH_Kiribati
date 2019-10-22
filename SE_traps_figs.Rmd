@@ -14,7 +14,7 @@ library(countrycode)
 
 trade_raw <- read.csv("Data/FoodBalanceSheets_E_All_Data.csv")
 health_raw <- read.csv("Data/SIDS_NCDs.csv")
-reefs_raw <- read.csv() # Need data from Jacob
+reefs_raw <- read.csv("Data/SIDS OHI 2012-2018.csv", stringsAsFactors = FALSE) # Need data from Jacob
 
 ```
 
@@ -51,9 +51,15 @@ health_clean <- health_raw %>%
   select(country.code, location_name, year, measure_name, cause_name, val) %>%
   spread(measure_name, val)
 
+# Clean OHI data
+reefs_clean <- reefs_raw %>%
+  select(location_name, year, OHI_val)
+reefs_clean$country.code <- countrycode(reefs_clean$location_name, origin = "country.name", destination = "iso3c")
+reefs_clean$year <- as.numeric(reefs_clean$year)
 
 # Merge data
 df <- inner_join(health_clean, trade_clean, by = c("year", "country.code"))
+df <- inner_join(df, reefs_clean, by = c("year", "country.code"))
 
 ```
 
@@ -64,7 +70,7 @@ df_plot <- df %>%
   filter(cause_name == "Cardiovascular diseases")
 
 ggplot(df_plot, aes(x = Percent_import, y = Prevalence)) +
-  geom_point()
+  geom_point(aes(colour = OHI_val))
 
 
 ```
