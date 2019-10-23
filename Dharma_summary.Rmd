@@ -235,7 +235,7 @@ write.csv(data.frame(place_of_birth = place_of_birth), "Outputs/place_of_birth.c
 ```
 
 ## Notes on the raw data
-Need to correct breastfeeding/lactating resonses (see below).
+Need to correct breastfeeding/lactating resonses (see below). There are `r nrow(data_clean)` complete records.
 
 ## The number of completed interviews by sex and age categories
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -243,7 +243,12 @@ age_sex <- data_clean %>%
   group_by(age_group, L1_q3_gender) %>%
   tally()
 colnames(age_sex) <- c("Age", "Sex", "Count")
-kable(age_sex)
+
+sumrow.func <- function(z) if (is.integer(z)) sum(z) else ''
+sumrow <- as.data.frame(lapply(age_sex, sumrow.func))
+
+kable(rbind(as.data.frame(age_sex), sumrow))
+
 
 ```
 
@@ -276,7 +281,6 @@ colnames(food_ranks) <- c("Mutton flaps", "Beef", "Pork", "Turkey tails", "Chick
 
 kable(sort(round(colMeans(food_ranks, na.rm = TRUE), digits = 2)), col.names = "Ave. Rank")
 
-
 ```
 
 ## Food preferences by age, sex
@@ -290,7 +294,6 @@ tab <- data_clean %>%
 colnames(tab) <- c("Sex", "Age", "Mutton flaps", "Beef", "Pork", "Turkey tails", "Chicken", 
                     "Spam", "Canned corn beef", "Tin fish", "Reef fish (e.g., snapper)", 
                     "Mackerel", "Tuna")
-
 kable(t(tab)) 
 
 ```
@@ -302,7 +305,10 @@ tab <- data_clean %>%
   group_by(fever_YN) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
+
 ```
 
 i. For fever, this is normal because we have been missing thermometers for lots of events, and I think some of the readings are in Celsius and so need to be converted as well. 
@@ -315,7 +321,9 @@ tab <- data_clean %>%
   group_by(BloodPressure_status) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
 ```
 
 ## Glucose summary
@@ -326,7 +334,9 @@ tab <- data_clean %>%
   group_by(Glucose_status) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
 ```
 
 ## Anemia summary
@@ -338,7 +348,9 @@ tab <- data_clean %>%
   group_by(anemia_status) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
 ```
 
 ## Cholesterol summary
@@ -349,7 +361,9 @@ tab <- data_clean %>%
   group_by(cholesterol_status) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
 ```
 
 ## Trigycerides summary
@@ -360,7 +374,9 @@ tab <- data_clean %>%
   group_by(triglycerides_status) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
 ```
 
 ## Diabetes summary
@@ -371,5 +387,7 @@ tab <- data_clean %>%
   group_by(diabetes_status) %>%
   count()
 
-kable(tab)
+sumrow <- as.data.frame(lapply(tab, sumrow.func))
+
+kable(rbind(as.data.frame(tab), sumrow))
 ```
