@@ -14,7 +14,7 @@ output:
 library(tidyverse)
 library(knitr)
 # Load data
-data_raw <- read.csv("Data/project_7458_kiribati_named.csv", na.strings='.') 
+data_raw <- read.csv("Data/project_7458_kiribati_named_6Mar20.csv", na.strings='.') 
 
 # When column A “FactID” = the following, please delete the record:
 FactID_remove <- c(8928972, 8928976, 8929006, 8930961, 8931112, 8931114, 8931115, 8931118, 8932937, 8933375, 8933391, 8936960,
@@ -24,28 +24,144 @@ FactID_remove <- c(8928972, 8928976, 8929006, 8930961, 8931112, 8931114, 8931115
 
 # Functions
 clean.named <- function(DATA, FactID_remove){
-  DATA$L1_q16_date_of_interview <- as.Date(DATA$L1_q16_date_of_interview, tryFormats = c("%m/%d/%y"))
-  DATA$L1_q1_dob <- as.Date(DATA$L1_q1_dob, tryFormats = c("%m/%d/%y"))
+  DATA <- DATA %>%
+    # Remove blank records (where gender and DOB are NA)
+    filter(is.na(L1_q1_dob) == FALSE & is.na(L1_q3_gender) == FALSE) %>%
+    # When column A “FactID” = the following, please delete the record:
+    filter(!(fact_0_id %in% FactID_remove)) %>%
+    # In column DC “deleted”, when TRUE, please delete/hide from analysis
+    filter(deleted == "False")
+  
+  DATA$L1_q16_date_of_interview <- as.Date(DATA$L1_q16_date_of_interview, tryFormats = c("%Y-%m-%d"))
+  DATA$L1_q1_dob <- as.Date(DATA$L1_q1_dob, tryFormats = c("%Y-%m-%d"))
   
   # Columns Q – Z will only have one answer per row to locate the community, 
   # could you collapse this so it just has this information in one column?
   # L1_q125_which_community_are_you_in:L1_q135_what_community_are_you_in
-  DATA$community <- c()
-  community_cols <- c("L1_q125_which_community_are_you_in", 
-                      "L1_q126_which_community_are_you_in",
-                      "L1_q127_which_community_are_you_in",
-                      "L1_q128_which_community_are_you_in",
-                      "L1_q129_which_community_are_you_in",
-                      "L1_q130_which_community_are_you_in",
-                      "L1_q131_which_community_are_you_in",
-                      "L1_q132_which_community_are_you_in",
-                      "L1_q133_which_community_are_you_in",
-                      "L1_q134_which_community_are_you_in",
-                      "L1_q135_which_community_are_you_in")
-  for(i in 1:length(community_cols)){
-    DATA$community[which(!is.na(DATA[[paste(community_cols[i])]]))] <- 
-      as.character(DATA[[paste(community_cols[i])]][which(!is.na(DATA[[paste(community_cols[i])]]))])
-  }
+  DATA <- DATA %>%
+    mutate(community = case_when(
+      (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ "none listed",
+      
+      (is.na(L1_q125_which_community_are_you_in) == FALSE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q125_which_community_are_you_in),
+      
+        (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == FALSE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q127_which_community_are_you_in),
+      
+        (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == FALSE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q128_which_community_are_you_in),
+      
+        (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == FALSE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q129_which_community_are_you_in),
+      
+        (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == FALSE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q130_which_community_are_you_in),
+      
+         (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == FALSE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q131_which_community_are_you_in),
+      
+        (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == FALSE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q132_what_community_are_you_in),
+      
+         (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == FALSE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q133_what_community_are_you_in),
+      
+        (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == FALSE &
+            is.na(L1_q135_what_community_are_you_in) == TRUE) ~ paste(L1_q134_what_community_are_you_in),
+      
+      (is.na(L1_q125_which_community_are_you_in) == TRUE &
+            is.na(L1_q127_which_community_are_you_in) == TRUE &
+            is.na(L1_q128_which_community_are_you_in) == TRUE &
+            is.na(L1_q129_which_community_are_you_in) == TRUE &
+            is.na(L1_q130_which_community_are_you_in) == TRUE &
+            is.na(L1_q131_which_community_are_you_in) == TRUE &
+            is.na(L1_q132_what_community_are_you_in) == TRUE &
+            is.na(L1_q133_what_community_are_you_in) == TRUE &
+            is.na(L1_q134_what_community_are_you_in) == TRUE &
+            is.na(L1_q135_what_community_are_you_in) == FALSE) ~ paste(L1_q135_what_community_are_you_in)
+      ))
+
   
   # Change column data type where needed
   DATA$L1_q227_lastmealtime <- as.character(DATA$L1_q227_lastmealtime)
@@ -55,12 +171,6 @@ clean.named <- function(DATA, FactID_remove){
     select(-c(L1_q41_ciguatera:L1_q220_duplicate_of_during_the_past_year_on_average_how_many_hours_did_you_spend_per_week_sitting_at_home_watching_tv_listening_to_radio_etc)) %>%
     # Remove L1_q125_which_community_are_you_in:L1_q135_what_community_are_you_in since they were collapsed into "community"
     select(-c(L1_q125_which_community_are_you_in:L1_q135_what_community_are_you_in)) %>%
-    # Remove blank records (where gender and DOB are NA)
-    filter(is.na(L1_q1_dob) == FALSE & is.na(L1_q3_gender) == FALSE) %>%
-    # When column A “FactID” = the following, please delete the record:
-    filter(!(fact_0_id %in% FactID_remove)) %>%
-    # In column DC “deleted”, when TRUE, please delete/hide from analysis
-    filter(deleted == FALSE) %>%
     # Use column K and L to calculate age days
     mutate(age_days = difftime(L1_q16_date_of_interview, L1_q1_dob, units="days")) %>%
     
