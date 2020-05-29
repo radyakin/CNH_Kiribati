@@ -3,11 +3,29 @@
 # Date: 20-May-20
 # Notes for Mike:
 # - Where is the market availability data that we had in the last iteration?
+# -- [name of product]_roster is the availability data
 # - What is the meaning of NA in the multiselect variable columns?
+# -- . and .a in STATA both mean missing. Refer to Mike's May 27 email for example (and to check for consistency with R)
 # - Why does VRS have household info and anemia info?
+# - Why are these output as different files (vrs, market, etc. each broken into multiple separate files)
+#   It is easiest to have the fewest number possible
+# - Are they going to translate the HIES iKiribati responses?
 
-# Note to self
-# - Push up to github and ping Kelvin
+
+# Suggested path forward:
+# 1. Write out tidy versions of each data set and share csv
+# 2. Write functions to visualize each question type:
+# - Multi- and single-select, produce bar chart
+# - Integer, produce bar chart
+# - Continuous, produce histogram and box and whisker
+# - Free response, compile unique answers with unique IDs for translation, question, island, possibly role
+# 3. Loop through data and produce pdf of all plots
+# 4. Start to creat summaries by village/island
+
+# Questions for the team
+# - How do they envision engaging with the data for this checking process?
+# - Timeline for compiling feedback for Mike by June 19 (suggest getting #3 to team by June 8)
+# - Need to coordinate cleaning across teams and centralizing code and data 
 
 library(haven)
 library(tidyverse)
@@ -28,10 +46,9 @@ health <- read_dta(file.path(datadir, "Health", "health.dta"))
 healthyLiving <- read_dta(file.path(datadir, "Health", "healthyLiving.dta"))
 
 # Just look at fish variables from market surveys for now
+# FIX IT: Look for easy way to combine all market survey data
 fishRoster <- read_dta(file.path(datadir, "Market Survey", "fish_roster.dta"))
 fishUnitRoster <- read_dta(file.path(datadir, "Market Survey", "fish_unit_roster.dta"))
-
-# availability <- read_dta(file.path(datadir, "marketSurveyAvailability.dta")) # Not in this folder
 
 # Village Resource Survey data
 eventRoster <- read_dta(file.path(datadir, "VRS", "event_roster.dta"))
@@ -54,24 +71,7 @@ var_labels <- clean_data(fisheries)[[2]]
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
-# NOTE: gather() is deprecated use pivot_longer instead
-#fisheriesTidy <- fisheries %>%
-#  gather(question, response, p902:p922n3) %>%
-#  filter(!is.na(response)) %>%
-#  left_join(var_labels, by = c("question" = "col.names")) %>%
-#  separate(col.labels, into = c("question.no", "question", "option"), sep = ":")
-
-
-fisheriesTidy <- fisheries %>%
-  mutate_at(vars(contains('p9')), as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(p902:p922n3, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question.no", "question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question))
-
-# FIX IT-
-# WHY NOT pivot the other question columns?
+# Make tidy
 fisheriesTidy <- fisheries %>%
   mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
   pivot_longer(sex:p922n3, names_to = "question", values_to = "response") %>%
@@ -93,20 +93,6 @@ plotDF_multiselect <- fisheriesTidy %>%
   filter(response == "1")
 
 # Plot histogram for each question
-# FIX IT: Not working as a loop. Need to decide best way to make many of these
-#i = 1
-#ggplot(plotDF_multiselect %>% filter(question == unique(plotDF_multiselect$question)[i]), aes(x = option)) +
-#    geom_bar() +
-#    labs(title = paste(unique(plotDF_multiselect$question)[i]), y = "Number of yes responses", x = "") +
-#    coord_flip()
-
-#i = 2
-#ggplot(plotDF_multiselect %>% filter(question == unique(plotDF_multiselect$question)[i]), aes(x = option)) +
-#  geom_bar() +
-#  labs(title = paste(unique(plotDF_multiselect$question)[i]), y = "Number of yes responses", x = "") +
-#  coord_flip()
-
-# LOOP:
 for (i in 1:length(unique(plotDF_multiselect$question))){
   question_i <- unique(plotDF_multiselect$question)[i]
 
@@ -114,33 +100,23 @@ for (i in 1:length(unique(plotDF_multiselect$question))){
     geom_bar() +
     labs(title = paste(question_i), y = "Number of yes responses", x = "") +
     coord_flip()
-
+  
+  # Print out each plot within R
+  print(p)
+  
+  # Save each plot
   file_i <- paste("plot_", question_i, ".png", sep="")
-
-  ggsave(filename = file.path(outdir, file_i))
+  #ggsave(filename = file.path(outdir, file_i))
 }
-
 
 
 # Histograms of single response questions
 plotDF_single <- fisheriesTidy %>%
   filter(is.na(option)) %>%
   filter(question.no %in% c("p903n", "p921n", "p922n1", "p922n2")==FALSE) # remove "other" responses
-  # mutate(option = as.numeric(option)) # Why? Delete?
-  # mutate(response = as.numeric(response)) # contains mix of characters and numerics, mutate within the loop
 
-
-# There are 11 questions, so choose i between 1 and 11
-#i = 5
-#ggplot(plotDF_single %>% filter(question == unique(plotDF_single$question)[i]), aes(x = response)) +
-#  geom_histogram() +
-#  labs(title = paste(unique(plotDF_single$question)[i]), y = "", x = "")
-
-
-# LOOP:
 for (i in 1:length(unique(plotDF_single$question))){
   question_i <- unique(plotDF_single$question)[i]
-
 
   plot_i <- plotDF_single %>%
     filter(question == question_i)
@@ -154,6 +130,10 @@ for (i in 1:length(unique(plotDF_single$question))){
       geom_histogram(binwidth = max(plot_i$response/5)) +
       labs(title = question_i, y = "", x = "")
 
+    # Print out each plot within R
+    print(p)
+    
+    # Save each plot
     question_i_no_slash <- str_remove(question_i, pattern = "/")
     file_i <- paste("plot_", question_i_no_slash, ".png", sep="")
 
@@ -167,6 +147,10 @@ for (i in 1:length(unique(plotDF_single$question))){
       geom_bar() +
       labs(title = question_i, y = "", x = "")
 
+    # Print out each plot within R
+    print(p)
+    
+    # Save each plot
     question_i_no_slash <- str_remove(question_i, pattern = "/")
     file_i <- paste("plot_", question_i_no_slash, ".png", sep="")
 
@@ -175,8 +159,6 @@ for (i in 1:length(unique(plotDF_single$question))){
   }
 
 }
-
-
 
 
 # LOOP but remove zero-inflation:
@@ -197,7 +179,11 @@ for (i in 1:length(unique(plotDF_single$question))){
     ggplot(plot_i, aes(x = response)) +
       geom_histogram(binwidth = max(plot_i$response/5)) +
       labs(title = paste(question_i, "(no zeroes)", sep = " "), y = "", x = "")
-
+    
+    # Print out each plot within R
+    print(p)
+    
+    # Save each plot
     question_i_no_slash <- str_remove(question_i, pattern = "/")
     file_i <- paste("plot_", question_i_no_slash, "_no_zeroes.png", sep="")
 
@@ -211,6 +197,10 @@ for (i in 1:length(unique(plotDF_single$question))){
       geom_bar() +
       labs(title = paste(question_i, "(no zeroes)", sep = " "), y = "", x = "")
 
+    # Print out each plot within R
+    print(p)
+    
+    # Save each plot
     question_i_no_slash <- str_remove(question_i, pattern = "/")
     file_i <- paste("plot_", question_i_no_slash, "_no_zeroes.png", sep="")
 
@@ -220,41 +210,29 @@ for (i in 1:length(unique(plotDF_single$question))){
 
 }
 
-
-
-
-
-
-# OLD: DELETE
-# LOOP but remove zero-inflation
-for (i in 1:length(unique(plotDF_single$question))){
-  question_i <- unique(plotDF_single$question)[i]
-
-  plot_i <- plotDF_single %>%
-    filter(question == question_i) %>%
-    filter(response != 0)
-
-
-  ggplot(plot_i, aes(x = response)) +
-    geom_histogram(binwidth = max(plot_i$response/10)) +
-    labs(title = question_i, y = "", x = "")
-
-  question_i_no_slash <- str_remove(question_i, pattern = "/")
-  file_i <- paste("plot_", question_i_no_slash, "_no_zeroes.png", sep="")
-
-  ggsave(filename = file.path(outdir, file_i))
-}
-
-
-
 #___________________________________________________________________________________________#
 # Clean VRS data
 #___________________________________________________________________________________________#
+vrs <- clean_data(vrs)[[1]]
 
+# Extract variable label attributes
+var_labels <- clean_data(vrs)[[2]]
 
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+vrsTidy <- vrs %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(vrs_island:assignment__id, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
 
 #___________________________________________________________________________________________#
 # Write out csv files
-
-
 #___________________________________________________________________________________________#
+
+
