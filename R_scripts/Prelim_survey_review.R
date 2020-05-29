@@ -83,7 +83,7 @@ fisheriesTidy <- fisheries %>%
          question = case_when(is.na(question) ~ question.no,
                               TRUE ~ question)) # For sex, age, birthday/year, relationship, age in mo.; there is no ":" separator, so copy "question.no" to fill in for "question"
 
-
+write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
 #___________________________________________________________________________________________#
 # Visualize fisheries data
 #___________________________________________________________________________________________#
@@ -231,8 +231,143 @@ vrsTidy <- vrs %>%
   separate(col.labels, into = c("question", "option"), sep = ":") %>%
   mutate(question = str_trim(question)) 
 
-#___________________________________________________________________________________________#
-# Write out csv files
-#___________________________________________________________________________________________#
+write.csv(vrsTidy, "Outputs/vrsTidy.csv", row.names = FALSE)
 
+#___________________________________________________________________________________________#
+# Clean event roster 
+#___________________________________________________________________________________________#
+eventRoster <- clean_data(eventRoster)[[1]]
 
+# Extract variable label attributes
+var_labels <- clean_data(eventRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+eventRosterTidy <- eventRoster %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(event_roster__id:event_nonfinfish, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
+
+write.csv(eventRosterTidy, "Outputs/eventRosterTidy.csv", row.names = FALSE)
+
+#___________________________________________________________________________________________#
+# Clean fish roster
+#___________________________________________________________________________________________#
+fishassetRoster <- clean_data(fishassetRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(fishassetRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+fishassetRosterTidy <- fishassetRoster %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(fish_asset_roster__id:num_assets10, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
+
+write.csv(fishassetRosterTidy, "Outputs/fishassetRosterTidy.csv", row.names = FALSE)
+
+#___________________________________________________________________________________________#
+# Clean outside roster
+#___________________________________________________________________________________________#
+outsideRoster <- clean_data(outsideRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(outsideRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+outsideRosterTidy <- outsideRoster %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(outside_roster__id:travel_time_out, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
+
+write.csv(outsideRosterTidy, "Outputs/outsideRosterTidy.csv", row.names = FALSE)
+
+#___________________________________________________________________________________________#
+# Clean share roster
+#___________________________________________________________________________________________#
+shareRoster <- clean_data(shareRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(shareRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+shareRosterTidy <- shareRoster %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(share_roster__id:share_other, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
+
+write.csv(shareRosterTidy, "Outputs/shareRosterTidy.csv", row.names = FALSE)
+
+#___________________________________________________________________________________________#
+# Clean VRS roster
+#___________________________________________________________________________________________#
+vrsRoster <- read_dta(file.path(datadir, "VRS", "vrs_roster.dta"))
+vrsRoster <- clean_data(vrsRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(vrsRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+vrsRosterTidy <- vrsRoster %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(vrs_roster__id:live_years, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
+
+write.csv(vrsRosterTidy, "Outputs/vrsRosterTidy.csv", row.names = FALSE)
+
+#___________________________________________________________________________________________#
+# Clean within roster
+#___________________________________________________________________________________________#
+withinRoster <- clean_data(withinRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(withinRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+withinRosterTidy <- withinRoster %>%
+  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
+  pivot_longer(within_roster__id:travel_time_within, names_to = "question", values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  left_join(var_labels, by = c("question" = "col.names")) %>%
+  separate(col.labels, into = c("question", "option"), sep = ":") %>%
+  mutate(question = str_trim(question)) 
+
+write.csv(withinRosterTidy, "Outputs/withinRosterTidy.csv", row.names = FALSE)
