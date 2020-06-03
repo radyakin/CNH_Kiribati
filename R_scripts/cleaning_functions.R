@@ -11,7 +11,7 @@ clean_data <- function(df){
   }
   
   df <- df %<>% 
-    mutate_if(is.labelled, funs(as_factor(.)))
+    mutate_if(is.labelled, as_factor)
   
   return(list(df = df, var_labels = var_labels))
 }
