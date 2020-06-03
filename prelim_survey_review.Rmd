@@ -1,30 +1,259 @@
 ---
-title: "prelim_survey_review"
+title: "Exploratory figures for CNHS"
 author: "Kelvin Gorospe and Jessica Gephart"
 date: "6/3/2020"
-output: pdf_document
+output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(haven)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+
+#___________________________________________________________________________________________#
+# Read in dta files
+#___________________________________________________________________________________________#
+datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
+outdir <- file.path(getwd(), "Outputs")
+
+source("R_scripts/cleaning_functions.R")
+source("R_scripts/plotting_functions.R")
+
 ```
 
-## R Markdown
+## Fisheries data
+### *Multi-response questions*
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r, warning = FALSE}
 
-```{r cars}
-summary(cars)
+#___________________________________________________________________________________________#
+# Clean fisheries data
+#___________________________________________________________________________________________#
+fisheries <- read_dta(file.path(datadir, "Fisheries", "Fisheries.dta"))
+
+
+fisheries <- clean_data(fisheries)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(fisheries)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+
+write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
+
+
+#___________________________________________________________________________________________#
+# Visualize fisheries data
+#___________________________________________________________________________________________#
+# Bar graphs and Histograms of single/multi-select questions
+plotDF_multiselect <- fisheriesTidy %>%
+  filter(!is.na(option)) %>%
+  filter(response == "1")
+
+# Plot bar graph for each multi-select question
+
+plot_multi_response(plotDF_multiselect)
+
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+## Fisheries continued...
+### *Single response questions*
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+
+```{r}
+
+# Plot histogram for each single response question while removing zeroes
+plotDF_single <- fisheriesTidy %>%
+  filter(is.na(option)) %>%
+    filter(question.no %in% c("p903n", "p921n", "p922n1", "p922n2")==FALSE) # remove "other" responses
+
+plot_single_response(plotDF_single, bin_n = 20)
+  
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## VRS Data
+### *Multi-response questions*
+
+
+
+```{r}
+
+#___________________________________________________________________________________________#
+# Clean VRS data
+#___________________________________________________________________________________________#
+vrs <- read_dta(file.path(datadir, "VRS", "VRS.dta"))
+
+vrs <- clean_data(vrs)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(vrs)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "vrs_island", pivot_col_last = "assignment__id", var_labels = var_labels, question_no = FALSE)
+
+write.csv(vrsTidy, "Outputs/vrsTidy.csv", row.names = FALSE)
+
+
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Bar graphs and Histograms of single/multi-select questions
+plotDF_multiselect <- vrsTidy %>%
+  filter(!is.na(option)) %>%
+  filter(response == "1")
+
+# Plot bar graph for each multi-select question
+
+plot_multi_response(plotDF_multiselect)
+
+```
+
+## VRS continued...
+### *Single response questions*
+
+
+```{r}
+# Plot histogram for each single response question while removing zeroes
+
+plotDF_single <- vrsTidy %>%
+  filter(is.na(option)) #%>%
+  #filter(question.no %in% c("p903n", "p921n", "p922n1", "p922n2")==FALSE) # remove "other" responses
+
+# FIX IT - if response contains both alpha and numeric, then it's not plotted (if statements in plot_single_response function); function needs to decide 
+
+plot_single_response(plotDF_single, bin_n = 20)
+  
+```
+
+
+## Event Roster Data
+### *Multi-response questions*
+
+
+
+```{r}
+
+#___________________________________________________________________________________________#
+# Clean event roster 
+#___________________________________________________________________________________________#
+eventRoster <- read_dta(file.path(datadir, "VRS", "event_roster.dta"))
+
+eventRoster <- clean_data(eventRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(eventRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_roster__id", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
+
+write.csv(eventRosterTidy, "Outputs/eventRosterTidy.csv", row.names = FALSE)
+
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Bar graphs and Histograms of single/multi-select questions
+plotDF_multiselect <- eventRosterTidy %>%
+  filter(!is.na(option)) %>%
+  filter(response == "1")
+
+# Plot bar graph for each multi-select question
+plot_multi_response(plotDF_multiselect)
+
+
+
+```
+
+
+## Event Roster continued...
+### *Single response questions*
+
+
+```{r}
+# Plot histogram for each single response question while removing zeroes
+
+plotDF_single <- eventRosterTidy %>%
+  filter(is.na(option)) #%>%
+  #filter(question.no %in% c("p903n", "p921n", "p922n1", "p922n2")==FALSE) # remove "other" responses
+
+
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## Fish Roster Data
+### *Multi-response questions*
+
+
+
+```{r}
+
+#___________________________________________________________________________________________#
+# Clean fish roster
+#___________________________________________________________________________________________#
+fishassetRoster <- clean_data(fishassetRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(fishassetRoster)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+fishassetRosterTidy <- tidy_data(df = fishassetRoster, pivot_col_1 = "fish_asset_roster__id", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
+
+write.csv(fishassetRosterTidy, "Outputs/fishassetRosterTidy.csv", row.names = FALSE)
+
+
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Bar graphs and Histograms of single/multi-select questions
+plotDF_multiselect <- fishassetRosterTidy %>%
+  filter(!is.na(option)) %>%
+  filter(response == "1")
+
+# Plot bar graph for each multi-select question
+plot_multi_response(plotDF_multiselect)
+
+
+
+```
+
+
+## Event Roster continued...
+### *Single response questions*
+
+
+```{r}
+# Plot histogram for each single response question while removing zeroes
+
+plotDF_single <- eventRosterTidy %>%
+  filter(is.na(option)) #%>%
+  #filter(question.no %in% c("p903n", "p921n", "p922n1", "p922n2")==FALSE) # remove "other" responses
+
+
+plot_single_response(plotDF_single, bin_n = 20)
+
+

@@ -125,7 +125,7 @@ for (i in 1:length(unique(plotDF_single$question))){
     plot_i <- plot_i %>%
       mutate(response = as.numeric(response))
 
-    ggplot(plot_i, aes(x = response)) +
+    p <- ggplot(plot_i, aes(x = response)) +
       geom_histogram(binwidth = max(plot_i$response/5)) +
       labs(title = question_i, y = "", x = "")
 
@@ -142,7 +142,7 @@ for (i in 1:length(unique(plotDF_single$question))){
   }
 
   if (str_detect(plot_i$response[1], pattern = "[[:alpha:]]")) {
-    ggplot(plot_i, aes(x = response)) +
+    p <- ggplot(plot_i, aes(x = response)) +
       geom_bar() +
       labs(title = question_i, y = "", x = "")
 

@@ -1,4 +1,4 @@
-# Functions
+# Cleaning Functions
 
 
 ###################################################################################################
@@ -30,7 +30,7 @@ tidy_data <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no =
     # Make tidy
     df_tidy <- df %>%
       mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-      pivot_longer(!!pivot_col_1:!!pivot_col_last, names_to = "question", values_to = "response") %>%
+      pivot_longer(all_of(pivot_col_1):all_of(pivot_col_last), names_to = "question", values_to = "response") %>% # NOTE: use all_of() to tidy_select variable names
       filter(!is.na(response)) %>%
       left_join(var_labels, by = c("question" = "col.names")) %>%
       separate(col.labels, into = c("question.no", "question", "option"), sep = ":") %>%
@@ -48,7 +48,7 @@ tidy_data <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no =
     # Make tidy
     df_tidy <- df %>%
       mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-      pivot_longer(pivot_col_1:!!pivot_col_last, names_to = "question", values_to = "response") %>%
+      pivot_longer(all_of(pivot_col_1):all_of(pivot_col_last), names_to = "question", values_to = "response") %>%
       filter(!is.na(response)) %>%
       left_join(var_labels, by = c("question" = "col.names")) %>%
       separate(col.labels, into = c("question", "option"), sep = ":") %>%
