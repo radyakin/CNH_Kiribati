@@ -31,12 +31,20 @@ library(haven)
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
-source("cleaning_functions.R") # FIX IT: This probably isn't the best way to do this
+
 #___________________________________________________________________________________________#
 # Read in dta files
 #___________________________________________________________________________________________#
 datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
 outdir <- file.path(getwd(), "Outputs")
+
+source("R_scripts/cleaning_functions.R")
+source("R_scripts/tidy_data.R")
+# FIXED? I just made the file structure look more like an R Project. 
+# Go to the root directory of your local repo for this project and make sure there are three folders: Data, Outputs, and R_scripts. 
+# Then place the cleaning_function.R inside the "R_scripts" folder. 
+# Set working directory to the root directory of your local repo and run script
+
 
 fisheries <- read_dta(file.path(datadir, "Fisheries", "Fisheries.dta"))
 
@@ -72,16 +80,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-fisheriesTidy <- fisheries %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(sex:p922n3, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question.no", "question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question),
-         question.no = tolower(question.no),
-         question = case_when(is.na(question) ~ question.no,
-                              TRUE ~ question)) # For sex, age, birthday/year, relationship, age in mo.; there is no ":" separator, so copy "question.no" to fill in for "question"
+fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
 #___________________________________________________________________________________________#
@@ -126,7 +125,7 @@ for (i in 1:length(unique(plotDF_single$question))){
     plot_i <- plot_i %>%
       mutate(response = as.numeric(response))
 
-    ggplot(plot_i, aes(x = response)) +
+    p <- ggplot(plot_i, aes(x = response)) +
       geom_histogram(binwidth = max(plot_i$response/5)) +
       labs(title = question_i, y = "", x = "")
 
@@ -143,7 +142,7 @@ for (i in 1:length(unique(plotDF_single$question))){
   }
 
   if (str_detect(plot_i$response[1], pattern = "[[:alpha:]]")) {
-    ggplot(plot_i, aes(x = response)) +
+    p <- ggplot(plot_i, aes(x = response)) +
       geom_bar() +
       labs(title = question_i, y = "", x = "")
 
@@ -223,13 +222,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-vrsTidy <- vrs %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(vrs_island:assignment__id, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "vrs_island", pivot_col_last = "assignment__id", var_labels = var_labels, question_no = FALSE)
 
 write.csv(vrsTidy, "Outputs/vrsTidy.csv", row.names = FALSE)
 
@@ -246,13 +239,9 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-eventRosterTidy <- eventRoster %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(event_roster__id:event_nonfinfish, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_roster__id", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
+
+
 
 write.csv(eventRosterTidy, "Outputs/eventRosterTidy.csv", row.names = FALSE)
 
@@ -269,13 +258,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-fishassetRosterTidy <- fishassetRoster %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(fish_asset_roster__id:num_assets10, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+fishassetRosterTidy <- tidy_data(df = fishassetRoster, pivot_col_1 = "fish_asset_roster__id", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
 
 write.csv(fishassetRosterTidy, "Outputs/fishassetRosterTidy.csv", row.names = FALSE)
 
@@ -292,13 +275,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-outsideRosterTidy <- outsideRoster %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(outside_roster__id:travel_time_out, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "outside_roster__id", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
 
 write.csv(outsideRosterTidy, "Outputs/outsideRosterTidy.csv", row.names = FALSE)
 
@@ -315,13 +292,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-shareRosterTidy <- shareRoster %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(share_roster__id:share_other, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "share_roster__id", pivot_col_last = "share_other", var_labels = var_labels, question_no = FALSE)
 
 write.csv(shareRosterTidy, "Outputs/shareRosterTidy.csv", row.names = FALSE)
 
@@ -339,13 +310,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-vrsRosterTidy <- vrsRoster %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(vrs_roster__id:live_years, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_roster__id", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
 
 write.csv(vrsRosterTidy, "Outputs/vrsRosterTidy.csv", row.names = FALSE)
 
@@ -362,12 +327,6 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-withinRosterTidy <- withinRoster %>%
-  mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
-  pivot_longer(within_roster__id:travel_time_within, names_to = "question", values_to = "response") %>%
-  filter(!is.na(response)) %>%
-  left_join(var_labels, by = c("question" = "col.names")) %>%
-  separate(col.labels, into = c("question", "option"), sep = ":") %>%
-  mutate(question = str_trim(question)) 
+withinRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "within_roster__id", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
 
 write.csv(withinRosterTidy, "Outputs/withinRosterTidy.csv", row.names = FALSE)
