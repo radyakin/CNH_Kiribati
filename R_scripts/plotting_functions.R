@@ -32,7 +32,8 @@ plot_single_response <- function(plotDF_single, bin_n = 20){
     question_i <- unique(plotDF_single$question)[i]
     
     plot_i <- plotDF_single %>%
-      filter(question == question_i) 
+      filter(question == question_i)  %>%
+      filter(response != "") # E.g., needed for VRS - single response; question = "Gender attending meeting"
     
     
     # STRICT if statement (must contain digit and must not contain alpha) - i.e., will not proceed if response is blank

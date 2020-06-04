@@ -132,10 +132,13 @@ plot_multi_response(plotDF_multiselect)
 # Plot histogram for each single response question while removing zeroes
 
 plotDF_single <- vrsTidy %>%
-  filter(is.na(option)) #%>%
-  #filter(question.no %in% c("p903n", "p921n", "p922n1", "p922n2")==FALSE) # remove "other" responses
-
-# FIX IT - if response contains both alpha and numeric, then it's not plotted (if statements in plot_single_response function); function needs to decide 
+  filter(is.na(option)) %>%
+  filter(question %in% c("VRS Village", "Household ID", "Start Time and Date for VRS section", "End Time and Date for VRS section")==FALSE) %>% # FIX IT - confirm: remove these?
+  filter(str_detect(question, pattern = "Other")==FALSE)   # all short answer questions 
+ 
+# FIX IT - need to output short answer responses, paired with? just the question? participant ID? other info?
+  
+  
 
 plot_single_response(plotDF_single, bin_n = 20)
   
