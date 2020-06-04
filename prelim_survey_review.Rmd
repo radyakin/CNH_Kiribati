@@ -5,7 +5,45 @@ date: "6/3/2020"
 output: html_document
 ---
 
-```{r setup, warning = FALSE, message = FALSE}
+
+Notes for Mike:
+ - Where is the market availability data that we had in the last iteration?
+ -- [name of product]_roster is the availability data
+ - What is the meaning of NA in the multiselect variable columns?
+ -- . and .a in STATA both mean missing. Refer to Mike's May 27 email for example (and to check for consistency with R)
+ - Why does VRS have household info and anemia info?
+ - Why are these output as different files (vrs, market, etc. each broken into multiple separate files)
+   It is easiest to have the fewest number possible
+ - Are they going to translate the HIES iKiribati responses?
+ - variable labels are cut off (how do we get the full answers back?) see: var_labels
+ - have units been standardized (e.g., for questions about cost, what is the currency?)
+
+
+ Suggested path forward:
+ 1. Write out tidy versions of each data set and share csv
+ 2. Write functions to visualize each question type:
+ - Multi- and single-select, produce bar chart
+ - Integer, produce bar chart
+ - Continuous, produce histogram and box and whisker
+ - Free response, compile unique answers with unique IDs for translation, question, island, possibly role
+ 3. Loop through data and produce pdf of all plots
+ 4. Start to creat summaries by village/island
+
+ Questions for the team
+ - How do they envision engaging with the data for this checking process?
+ - Is a response of "zero" the same as blank response? 
+ - Timeline for compiling feedback for Mike by June 19 (suggest getting #3 to team by June 8)
+ - Need to coordinate cleaning across teams and centralizing code and data 
+ 
+ 
+
+
+```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
+
+
+
+
+
 knitr::opts_chunk$set(echo = FALSE)
 library(haven)
 library(tidyverse)
