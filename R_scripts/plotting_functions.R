@@ -3,11 +3,14 @@
 ###################################################################################################################################################
 
 plot_multi_response <- function(plotDF_multiselect)
-
+  
 for (i in 1:length(unique(plotDF_multiselect$question))){
   question_i <- unique(plotDF_multiselect$question)[i]
   
-  p <- ggplot(plotDF_multiselect %>% filter(question == question_i), aes(x = option)) +
+  plot_i <- plotDF_multiselect %>% 
+    filter(question == question_i)
+  
+  p <- ggplot(plot_i, aes(x = option)) +
     geom_bar() +
     labs(title = paste(question_i), y = "Number of yes responses", x = "") +
     coord_flip()
