@@ -1418,4 +1418,70 @@ plot_single_response(plotDF_single, bin_n = 20)
 ```
 
 
+## *Market survey*
+
+```{r, warning=FALSE}
+#___________________________________________________________________________________________#
+# Clean market data
+#___________________________________________________________________________________________#
+market.files <- list.files("Data/HIES_raw_19May20/Market Survey")
+
+# Identify each group of surveys
+unit.roster.files <- market.files[grep("unit", market.files)]
+food.roster.files <- market.files[grep("roster", market.files)]
+food.roster.files <- food.roster.files[!(food.roster.files %in% unit.roster.files)]
+
+# Join all unit rosters
+unitRoster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", unit.roster.files[1]))
+unitRoster <- clean_data(unitRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(unitRoster)[[2]]
+
+# Make tidy
+unitRoster <- tidy_data(df = unitRoster, pivot_col_1 = colnames(unitRoster)[3], pivot_col_last = colnames(unitRoster)[length(unitRoster)], var_labels = var_labels, question_no = FALSE)
+
+for(i in 2:length(unit.roster.files)){
+  df.rep <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", unit.roster.files[i]))
+  df.rep <- clean_data(df.rep)[[1]]
+  
+  # Extract variable label attributes
+  var_labels <- clean_data(df.rep)[[2]]
+  # Make tidy
+  df.rep <- tidy_data(df = df.rep, pivot_col_1 = colnames(df.rep)[3], pivot_col_last = colnames(df.rep)[length(colnames(df.rep))], var_labels = var_labels, question_no = FALSE)
+  
+  # Join all unit roster data
+  unitRoster <- bind_rows(unitRoster, df.rep)
+}
+
+
+# Join all food rosters
+foodRoster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", food.roster.files[1]))
+foodRoster <- clean_data(foodRoster)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(foodRoster)[[2]]
+
+# Make tidy
+foodRoster <- tidy_data(df = foodRoster, pivot_col_1 = colnames(foodRoster)[4], pivot_col_last = colnames(foodRoster)[length(foodRoster)], var_labels = var_labels, question_no = FALSE)
+colnames(foodRoster)[3] <- "roster__id"
+
+for(i in 2:length(food.roster.files)){
+  df.rep <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", food.roster.files[i]))
+  df.rep <- clean_data(df.rep)[[1]]
+  
+  # Extract variable label attributes
+  var_labels <- clean_data(df.rep)[[2]]
+  # Make tidy
+  df.rep <- tidy_data(df = df.rep, pivot_col_1 = colnames(df.rep)[4], pivot_col_last = colnames(df.rep)[length(colnames(df.rep))], var_labels = var_labels, question_no = FALSE)
+  colnames(df.rep)[3] <- "roster__id"
+  
+  # Join all unit roster data
+  foodRoster <- bind_rows(foodRoster, df.rep)
+}
+
+# Plot food item availability
+plot.food.roster(foodRoster)
+
+```
 
