@@ -102,20 +102,15 @@ plot_single_response <- function(plotDF_single, bin_n = 20){
 
 ###################################################################################################################################################
 
-plot.food.roster <- function(plotDF_food, bin_n = 10){
-  # Filter frequency questions to plot with non-null responses
-  plotDF_food <- plotDF_food %>% 
-    filter(str_detect(question, pattern = "availability")) %>%
-    filter(response %in% c("A couple days per week", "A couple days per month", 
-                           "Seasonally",  "All the time", "Other times (specify)"))
-  
-  plotDF_food$response <- factor(plotDF_food$response, levels = c("A couple days per week", "A couple days per month", 
-                                                                  "Seasonally",  "All the time", "Other times (specify)"))
+plot.food.availability <- function(plotDF_food){
+  plotDF_food$availability <- factor(plotDF_food$availability, 
+                                     levels = c("A couple days per week", "A couple days per month", 
+                                               "Seasonally",  "All the time", "Other times (specify)"))
   
   # Create plot for each food item
   for(i in 1:length(unique(plotDF_food$roster__id))){
     p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
-                aes(x = response)) +
+                aes(x = availability)) +
       geom_bar() +
       labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))

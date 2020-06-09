@@ -29,16 +29,11 @@ Suggested path forward:
      - Continuous, produce histogram and (TBD: box and whisker)
      - Free response, compile unique answers with unique IDs for translation, question, island, possibly role
 3. Loop through data and produce pdf of all plots
-4. TBD: Start to creat summaries by village/island
+4. TBD: Start to create summaries by village/island
  
 
 
 ```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
-
-
-
-
-
 knitr::opts_chunk$set(echo = FALSE)
 library(haven)
 library(tidyverse)
@@ -1485,3 +1480,104 @@ plot.food.roster(foodRoster)
 
 ```
 
+
+## *Market survey take 2*
+
+```{r, warning=FALSE}
+#___________________________________________________________________________________________#
+# Clean market data
+#___________________________________________________________________________________________#
+market.files <- list.files("Data/HIES_raw_19May20/Market Survey")
+
+# ID unique food items
+food.files <- unique(gsub("_.*", '', market.files))
+food.files <- food.files[food.files != "MarketSurvey.dta"]
+food.items[food.items == "veges"] <- "vege" # make singular (have to keep plural to read in file)
+
+# Combine food and unit rosters
+food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[1], "roster.dta", sep ="_")))
+unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[1], "unit", "roster.dta", sep ="_")))
+# Standardize column names
+colnames(food.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(food.roster))
+colnames(unit.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(unit.roster))
+
+# Merge by roster__id column (but not unit_roster__id column)
+marketSurvey <- full_join(food.roster, unit.roster, by = c("interview__key", "interview__id", paste(food.items[1], "roster__id", sep ="_")))
+
+# Clean and extract variable label attributes
+marketSurvey <- clean_data(marketSurvey)[[1]]
+
+
+# Remove y/n units columns and rename others
+select.cols <- c("interview__key", "interview__id", 
+                 paste(food.items[1], "roster__id", sep = "_"),
+                 paste("other", food.items[1], "units", sep = "_"),
+                 paste(food.items[1], "available", sep = "_"),
+                 paste(food.items[1], "avail_oth", sep = "_"),
+                 paste(food.items[1], "unit_roster__id", sep = "_"),
+                 paste(food.items[1], "price", sep = "_"),
+                 paste(food.items[1], "weight", sep = "_"),
+                 paste(food.items[1], "unit_oth", sep = "_")
+                 )
+marketSurvey <- marketSurvey %>% 
+  select_at(vars(select.cols))
+
+# Standardize column names
+colnames(marketSurvey) <- c("interview__key", "interview__id", "roster__id","other_units","availability","availability_other",
+                            "unit_roster__id","price","weight", "unit_other")
+
+
+for(i in 2:length(food.items)){
+  food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[i], "roster.dta", sep ="_")))
+  unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[i], "unit", "roster.dta", sep ="_")))
+  
+  # Standardize column names
+  colnames(food.roster) <- gsub(paste(food.items[i], "s", sep = ""), paste(food.items[i]), colnames(food.roster))
+  colnames(unit.roster) <- gsub(paste(food.items[i], "s", sep = ""), paste(food.items[i]), colnames(unit.roster))
+
+  # Merge by roster__id column (but not unit_roster__id column)
+  food.unit.roster <- full_join(food.roster, unit.roster, by = c("interview__key", "interview__id", paste(food.items[i], "roster__id", sep ="_")))
+
+  # Clean and extract variable label attributes
+  food.unit.roster <- clean_data(food.unit.roster)[[1]]
+
+  
+  # Remove y/n units columns and rename others
+  select.cols <- c("interview__key", "interview__id", 
+                 paste(food.items[i], "roster__id", sep = "_"),
+                 paste("other", food.items[i], "units", sep = "_"),
+                 paste(food.items[i], "available", sep = "_"),
+                 paste(food.items[i], "avail_oth", sep = "_"),
+                 paste(food.items[i], "unit_roster__id", sep = "_"),
+                 paste(food.items[i], "price", sep = "_"),
+                 paste(food.items[i], "weight", sep = "_"),
+                 paste(food.items[i], "unit_oth", sep = "_")
+                 )
+  food.unit.roster <- food.unit.roster %>% 
+    select_at(vars(select.cols))
+
+# Standardize column names
+colnames(food.unit.roster) <- c("interview__key", "interview__id", "roster__id","other_units","availability","availability_other",
+                            "unit_roster__id","price","weight", "unit_other")
+  
+  # Join with marketSurvey to create join all foods
+  marketSurvey <- bind_rows(marketSurvey, food.unit.roster)
+}
+
+# Merge with survey location info
+survey.info <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", "MarketSurvey.dta"))
+survey.info <- clean_data(survey.info)[[1]]
+
+survey.info <- survey.info %>%
+  select("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")
+
+marketSurvey <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
+
+# Plot food item availability
+plot.food.availability(marketSurvey)
+
+```
