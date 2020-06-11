@@ -1,7 +1,7 @@
 ---
 title: "Exploratory figures for CNHS"
 author: "Kelvin Gorospe and Jessica Gephart"
-date: "6/3/2020"
+date: "6/10/2020"
 output: pdf_document
 ---
 
@@ -60,10 +60,12 @@ source("R_scripts/plotting_functions.R")
 ```
 
 ## Fisheries data
-### *Multi-response questions*
+### *Note: no island information in current dataset
 
 
 ```{r, warning = FALSE}
+
+# FIX IT - if island information becomes available for fisheries data, will also need to incorporate p903r and p922.dta files (in Fisheries data folder): just copy code from prelim_survey_review.Rmd
 
 #___________________________________________________________________________________________#
 # Clean fisheries data
@@ -83,8 +85,11 @@ var_labels <- var_labels %>%
 fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
+```
 
 
+
+```{r, fig.height = 8, fig.width = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize fisheries data
 #___________________________________________________________________________________________#
@@ -98,7 +103,6 @@ plotDF_multiselect <- fisheriesTidy %>%
 
 plot_multi_response(plotDF_multiselect)
 
-
 ```
 
 
@@ -107,7 +111,7 @@ plot_multi_response(plotDF_multiselect)
 
 
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 # List short-answer, fill-in response questions here:
 fill_in_questions <- c("p903n", "p921n", "p922n1", "p922n2")
@@ -138,7 +142,7 @@ write.csv(other_answers, "Outputs/fisheries_other_answers.csv", row.names = FALS
 
 
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Clean VRS data
@@ -180,7 +184,7 @@ plot_multi_response(plotDF_multiselect, incl_island = TRUE)
 ### *Single response questions*
 
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 # Plot histogram for each single response question while removing zeroes
 
 # List short-answer, fill-in response questions here:
@@ -192,7 +196,7 @@ fill_in_questions <- vrsTidy %>%
 # Additional fill-in response questions:
 fill_in_questions <- c(fill_in_questions, "Gender attending meeting", "Type of work the looking for", "New village rules")
 
-# FIX IT - note: some short answers are still included in the single plots because they don't look too bad (e.g., "Year sewerage channel was introduced", Fee for connecting to sewage system); additional fill-in response questions are ID'ed based on eyeballing final plots
+# FIX IT - note: some short answers are still included in the single plots because they don't look too bad (e.g., "Year sewerage channel was introduced", Fee for connecting to sewage system); fill-in response questions are ID'ed based on eyeballing final plots
 
 # FIX IT - confirm: assuming zero is different from "blank" (plotting function reports number of zeroes removed)
 plotDF_single <- vrsTidy %>%
@@ -280,7 +284,7 @@ event_subsets
 
 ## *Event: Coral bleaching*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -298,7 +302,7 @@ plot_single_response(plotDF_single, bin_n = 20,incl_island = TRUE)
 
 ## *Event: Cyclone*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -316,7 +320,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Event: Harmful algal bloom*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -333,7 +337,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Event: Tsunami*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -386,7 +390,7 @@ event_subsets
 ```
 ### *Asset: Fibreglass boats*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -402,7 +406,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ```
 ## *Asset: Outboard Motors*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -422,7 +426,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Fishing Nets (gillnet)*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -439,7 +443,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Spearguns*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -459,7 +463,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Fishing Lines*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -478,7 +482,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Active Fish Traps*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -497,7 +501,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Underwater flashlights*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -514,7 +518,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Wood canoes*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -532,7 +536,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Eskies/portable coolers*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -552,7 +556,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: SCUBA diving equipment*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -571,7 +575,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Freezers (electric or propane)*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -591,7 +595,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Ice machines*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -611,7 +615,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Fishing Nets (purse)*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -628,7 +632,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Drag Nets*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -647,7 +651,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Harpoons/Spears*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -665,7 +669,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: FAD (Fish Aggregating Device)*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -683,7 +687,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Other Fishing Equipment (note)*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -730,15 +734,14 @@ var_labels <- var_labels %>%
 # Make tidy
 outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "village_distance_out", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
 
-# Filter out short answer responses before moving on to plotting data subsets
-short_answers <- c("Other transport mode outside boundary", "Travel time outside boundary")
-# Short answers - units need to be standardized and some responses need to be translated
-
-outsideRosterTidy <- outsideRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
 
 write.csv(outsideRosterTidy, "Outputs/outsideRosterTidy.csv", row.names = FALSE)
 
+
+
+# Output short answers
+short_answers <- c("Other transport mode outside boundary", "Travel time outside boundary")
+# Short answers - units need to be standardized and some responses need to be translated
 
 # Output short answer responses for translation
 other_answers <- outsideRosterTidy %>% 
@@ -748,6 +751,9 @@ other_answers <- outsideRosterTidy %>%
 
 write.csv(other_answers, "Outputs/outsideRoster_other_answers.csv", row.names = FALSE)
 
+#Filter out short answer responses before moving on to plotting data subsets
+outsideRosterTidy <- outsideRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 
 event_subsets <- outsideRosterTidy %>%
@@ -761,7 +767,7 @@ event_subsets
 
 ## *Asset: Clinic/Hospital*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -781,7 +787,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Bank*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -820,7 +826,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset:  Nearest Post Office*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -841,7 +847,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Credit Facility*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -860,7 +866,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Police Station*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -883,7 +889,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Court House*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -902,7 +908,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Airport*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -923,7 +929,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -944,7 +950,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest fish landing site*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -966,7 +972,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Church*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1013,18 +1019,12 @@ var_labels <- var_labels %>%
 # Make tidy
 shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "catch_receiver__1", pivot_col_last = "share_other", var_labels = var_labels, question_no = FALSE)
 
+write.csv(shareRosterTidy, "Outputs/shareRosterTidy", row.names = FALSE)
 
-
-# Filter out short answer responses before moving on to plotting data subsets
+# List short answer questions
 short_answers <- c("Other giver of the sharing of catches", "Other receiver from the sharing of catches", "Other relationship from the sharing of catches",
                    "Other sharer of the catches")
 # Short answers - units need to be standardized and some responses need to be translated
-
-shareRosterTidy <- shareRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
-write.csv(shareRosterTidy, "Outputs/shareRosterTidy", row.names = FALSE)
-
 
 # Output short answer responses for translation
 other_answers <- shareRosterTidy %>% 
@@ -1034,6 +1034,9 @@ other_answers <- shareRosterTidy %>%
 
 write.csv(other_answers, "Outputs/shareRoster_other_answers.csv", row.names = FALSE)
 
+# Filter out short answer responses before moving on to plotting data subsets
+shareRosterTidy <- shareRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 
 event_subsets <- shareRosterTidy %>%
@@ -1049,7 +1052,7 @@ event_subsets
 
 ## *Asset: Finfish*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1072,7 +1075,7 @@ plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
 
 ## *Asset: Other non-finfish seafood (shellfish, sea worm, etc.)*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1096,7 +1099,7 @@ plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
 
 ## *Asset: Non-fish foods*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1149,16 +1152,12 @@ var_labels <- var_labels %>%
 # Make tidy
 vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
 
-# Filter out short answer responses before moving on to plotting data subsets
-short_answers <- c("Other position of the respondent")
-# Short answers - units need to be standardized and some responses need to be translated
-
-vrsRosterTidy <- vrsRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
-
 write.csv(vrsRosterTidy, "Outputs/vrsRosterTidy.csv", row.names = FALSE)
 
+
+# List short answer questions
+short_answers <- c("Other position of the respondent")
+# Short answers - units need to be standardized and some responses need to be translated
 
 # Output short answer responses for translation
 other_answers <- vrsRosterTidy %>% 
@@ -1168,6 +1167,10 @@ other_answers <- vrsRosterTidy %>%
 
 write.csv(other_answers, "Outputs/vrsRoster_other_answers.csv", row.names = FALSE)
 
+
+# Filter out short answer responses before moving on to plotting data subsets
+vrsRosterTidy <- vrsRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 
 event_subsets <- vrsRosterTidy %>%
@@ -1186,7 +1189,7 @@ event_subsets
 
 ## *VRS Roster: 1*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1213,7 +1216,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 #___________________________________________________________________________________________#
 # Note: VRS Roster 2 only contains one individual with the following characteristics
 
-vrsRosterTidy %>% filter(vrs_roster__id==2)
+#vrsRosterTidy %>% filter(vrs_roster__id==2)
 
 
 ```
@@ -1247,17 +1250,11 @@ var_labels <- var_labels %>%
 # Make tidy
 withinRosterTidy <- tidy_data(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
 
-# Filter out short answer responses before moving on to plotting data subsets
-short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
-# Short answers - units need to be standardized and some responses need to be translated
-
-
-withinRosterTidy <- withinRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
-
 write.csv(withinRosterTidy, "Outputs/withinRosterTidy.csv", row.names = FALSE)
 
+# List short answer questions:
+short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
+# Short answers - units need to be standardized and some responses need to be translated
 
 # Output short answer responses for translation
 other_answers <- withinRosterTidy %>% 
@@ -1267,7 +1264,9 @@ other_answers <- withinRosterTidy %>%
 
 write.csv(other_answers, "Outputs/withinRoster_other_answers.csv", row.names = FALSE)
 
-
+# Filter out short answer responses before moving on to plotting data subsets
+withinRosterTidy <- withinRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 event_subsets <- withinRosterTidy %>%
   select(within_roster__id) %>%
@@ -1285,7 +1284,7 @@ event_subsets
 
 ## *Asset: Nearest Church*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1302,7 +1301,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1320,7 +1319,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Airport*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1339,7 +1338,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Clinic/Hospital*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1358,7 +1357,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest fish landing site*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1377,7 +1376,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Credit Facility*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1395,7 +1394,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Market*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1412,7 +1411,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Post Office*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1430,7 +1429,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Nearest Court House*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1447,7 +1446,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ## *Asset: Bank*
 
-```{r}
+```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1462,70 +1461,108 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ```
 
 
+
+
 ## *Market survey*
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
 # Clean market data
 #___________________________________________________________________________________________#
 market.files <- list.files("Data/HIES_raw_19May20/Market Survey")
 
-# Identify each group of surveys
-unit.roster.files <- market.files[grep("unit", market.files)]
-food.roster.files <- market.files[grep("roster", market.files)]
-food.roster.files <- food.roster.files[!(food.roster.files %in% unit.roster.files)]
+# ID unique food items
+food.files <- unique(gsub("_.*", '', market.files))
+food.files <- food.files[food.files != "MarketSurvey.dta"]
 
-# Join all unit rosters
-unitRoster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", unit.roster.files[1]))
-unitRoster <- clean_data(unitRoster)[[1]]
+food.items <- food.files
+food.items[food.items == "veges"] <- "vege" # make singular (have to keep plural to read in file)
 
-# Extract variable label attributes
-var_labels <- clean_data(unitRoster)[[2]]
+# Combine food and unit rosters
+food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[1], "roster.dta", sep ="_")))
+unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[1], "unit", "roster.dta", sep ="_")))
+# Standardize column names
+colnames(food.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(food.roster))
+colnames(unit.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(unit.roster))
 
-# Make tidy
-unitRoster <- tidy_data(df = unitRoster, pivot_col_1 = colnames(unitRoster)[3], pivot_col_last = colnames(unitRoster)[length(unitRoster)], var_labels = var_labels, question_no = FALSE)
+# Merge by roster__id column (but not unit_roster__id column)
+marketSurvey <- full_join(food.roster, unit.roster, by = c("interview__key", "interview__id", paste(food.items[1], "roster__id", sep ="_")))
 
-for(i in 2:length(unit.roster.files)){
-  df.rep <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", unit.roster.files[i]))
-  df.rep <- clean_data(df.rep)[[1]]
+# Clean and extract variable label attributes
+marketSurvey <- clean_data(marketSurvey)[[1]]
+
+
+# Remove y/n units columns and rename others
+select.cols <- c("interview__key", "interview__id", 
+                 paste(food.items[1], "roster__id", sep = "_"),
+                 paste("other", food.items[1], "units", sep = "_"),
+                 paste(food.items[1], "available", sep = "_"),
+                 paste(food.items[1], "avail_oth", sep = "_"),
+                 paste(food.items[1], "unit_roster__id", sep = "_"),
+                 paste(food.items[1], "price", sep = "_"),
+                 paste(food.items[1], "weight", sep = "_"),
+                 paste(food.items[1], "unit_oth", sep = "_")
+                 )
+marketSurvey <- marketSurvey %>% 
+  select_at(vars(select.cols))
+
+# Standardize column names
+colnames(marketSurvey) <- c("interview__key", "interview__id", "roster__id","other_units","availability","availability_other",
+                            "unit_roster__id","price","weight", "unit_other")
+
+
+for(i in 2:length(food.items)){
+  food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[i], "roster.dta", sep ="_")))
+  unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+                                    paste(food.files[i], "unit", "roster.dta", sep ="_")))
   
-  # Extract variable label attributes
-  var_labels <- clean_data(df.rep)[[2]]
-  # Make tidy
-  df.rep <- tidy_data(df = df.rep, pivot_col_1 = colnames(df.rep)[3], pivot_col_last = colnames(df.rep)[length(colnames(df.rep))], var_labels = var_labels, question_no = FALSE)
+  # Standardize column names
+  colnames(food.roster) <- gsub(paste(food.items[i], "s", sep = ""), paste(food.items[i]), colnames(food.roster))
+  colnames(unit.roster) <- gsub(paste(food.items[i], "s", sep = ""), paste(food.items[i]), colnames(unit.roster))
+
+  # Merge by roster__id column (but not unit_roster__id column)
+  food.unit.roster <- full_join(food.roster, unit.roster, by = c("interview__key", "interview__id", paste(food.items[i], "roster__id", sep ="_")))
+
+  # Clean and extract variable label attributes
+  food.unit.roster <- clean_data(food.unit.roster)[[1]]
+
   
-  # Join all unit roster data
-  unitRoster <- bind_rows(unitRoster, df.rep)
+  # Remove y/n units columns and rename others
+  select.cols <- c("interview__key", "interview__id", 
+                 paste(food.items[i], "roster__id", sep = "_"),
+                 paste("other", food.items[i], "units", sep = "_"),
+                 paste(food.items[i], "available", sep = "_"),
+                 paste(food.items[i], "avail_oth", sep = "_"),
+                 paste(food.items[i], "unit_roster__id", sep = "_"),
+                 paste(food.items[i], "price", sep = "_"),
+                 paste(food.items[i], "weight", sep = "_"),
+                 paste(food.items[i], "unit_oth", sep = "_")
+                 )
+  food.unit.roster <- food.unit.roster %>% 
+    select_at(vars(select.cols))
+
+# Standardize column names
+colnames(food.unit.roster) <- c("interview__key", "interview__id", "roster__id","other_units","availability","availability_other",
+                            "unit_roster__id","price","weight", "unit_other")
+  
+  # Join with marketSurvey to create join all foods
+  marketSurvey <- bind_rows(marketSurvey, food.unit.roster)
 }
 
+# Merge with survey location info
+survey.info <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", "MarketSurvey.dta"))
+survey.info <- clean_data(survey.info)[[1]]
 
-# Join all food rosters
-foodRoster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", food.roster.files[1]))
-foodRoster <- clean_data(foodRoster)[[1]]
+survey.info <- survey.info %>%
+  select("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")
 
-# Extract variable label attributes
-var_labels <- clean_data(foodRoster)[[2]]
-
-# Make tidy
-foodRoster <- tidy_data(df = foodRoster, pivot_col_1 = colnames(foodRoster)[4], pivot_col_last = colnames(foodRoster)[length(foodRoster)], var_labels = var_labels, question_no = FALSE)
-colnames(foodRoster)[3] <- "roster__id"
-
-for(i in 2:length(food.roster.files)){
-  df.rep <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", food.roster.files[i]))
-  df.rep <- clean_data(df.rep)[[1]]
-  
-  # Extract variable label attributes
-  var_labels <- clean_data(df.rep)[[2]]
-  # Make tidy
-  df.rep <- tidy_data(df = df.rep, pivot_col_1 = colnames(df.rep)[4], pivot_col_last = colnames(df.rep)[length(colnames(df.rep))], var_labels = var_labels, question_no = FALSE)
-  colnames(df.rep)[3] <- "roster__id"
-  
-  # Join all unit roster data
-  foodRoster <- bind_rows(foodRoster, df.rep)
-}
+marketSurvey <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
 
 # Plot food item availability
-plot.food.roster(foodRoster)
+plot.food.availability(marketSurvey, incl_island = TRUE)
 
 ```
 

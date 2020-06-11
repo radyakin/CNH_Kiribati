@@ -14,7 +14,7 @@ for (i in 1:length(unique(plotDF_multiselect$question))){
     p <- ggplot(plot_i, aes(x = option)) +
       geom_bar() +
       labs(title = paste(question_i), x = "Number of yes responses", y = "") +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+      theme(axis.text.x = element_text(size = 8, angle = 90, hjust = 1, vjust = 0.5)) +
       facet_wrap(~vrs_island)
   } else {
     p <- ggplot(plot_i, aes(x = option)) +
@@ -25,6 +25,8 @@ for (i in 1:length(unique(plotDF_multiselect$question))){
 
   # Print out each plot within R
   print(p)
+  # Go to new page before printing next figure
+  cat("\n\n\\newpage\n")
 
   # Save each plot
   #file_i <- paste("plot_", question_i, ".png", sep="")
@@ -81,6 +83,8 @@ plot_single_response <- function(plotDF_single, bin_n = 20, incl_island = FALSE)
       
       # Print out each plot within R
       print(p)
+      # Go to new page before printing next figure
+      cat("\n\n\\newpage\n")
       
       # Save each plot
       #question_i_no_slash <- str_remove(question_i, pattern = "/")
@@ -94,7 +98,7 @@ plot_single_response <- function(plotDF_single, bin_n = 20, incl_island = FALSE)
         p <- ggplot(plot_i, aes(x = response)) +
           geom_bar() +
           labs(title = question_i, y = "", x = "") +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+          theme(axis.text.x = element_text(size = 8, angle = 90, hjust = 1, vjust = 0.5)) +
           facet_wrap(~vrs_island)
       } else {
         p <- ggplot(plot_i, aes(x = response)) +
@@ -102,9 +106,12 @@ plot_single_response <- function(plotDF_single, bin_n = 20, incl_island = FALSE)
           labs(title = question_i, y = "", x = "") +
           theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
       }
+
       
       # Print out each plot within R
       print(p)
+      # Go to new page before printing next figure
+      cat("\n\n\\newpage\n")
       
       # Save each plot
       #question_i_no_slash <- str_remove(question_i, pattern = "/")
@@ -120,20 +127,34 @@ plot_single_response <- function(plotDF_single, bin_n = 20, incl_island = FALSE)
 
 ###################################################################################################################################################
 
-plot.food.availability <- function(plotDF_food){
+plot.food.availability <- function(plotDF_food, incl_island = FALSE){
   plotDF_food$availability <- factor(plotDF_food$availability, 
                                      levels = c("A couple days per week", "A couple days per month", 
                                                "Seasonally",  "All the time", "Other times (specify)"))
   
   # Create plot for each food item
   for(i in 1:length(unique(plotDF_food$roster__id))){
-    p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
-                aes(x = availability)) +
-      geom_bar() +
-      labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    
+    if (incl_island == TRUE){
+      p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
+                  aes(x = availability)) +
+        geom_bar() +
+        labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
+        theme(axis.text.x = element_text(size = 8, angle = 90, hjust = 1, vjust = 0.5)) +
+        facet_wrap(~ms_island)
+    } else {
+      
+      p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
+                  aes(x = availability)) +
+        geom_bar() +
+        labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    }
+ 
     
     # Print out each plot within R
     print(p)
+    # Go to new page before printing next figure
+    cat("\n\n\\newpage\n")
   }
 }
