@@ -169,7 +169,8 @@ short_answers <- c("other method of transportation")
 other_answers <- fisheriesTidy_903 %>% 
   filter(question %in% short_answers) %>%
   filter(response != "") %>% 
-  unique()
+  unique() %>%
+  arrange(question)
 
 write.csv(other_answers, "Outputs/fisheries_903R_other_answers.csv", row.names = FALSE)
 
