@@ -206,6 +206,7 @@ plotDF_single <- fisheriesTidy_903 %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20)
 
+
 ```
 
 
@@ -351,6 +352,58 @@ plotDF_single <- fisheriesTidy_903 %>%
 
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## p903 continued: CPUE
+
+```{r, fig.height = 8, results = 'asis'}
+
+cpue_pivot <- fisheriesTidy_903 %>%
+  filter(question %in% c("hours spent on the trip to access current method",
+                         "number of fishing trips",
+                         "hours spent on current method",
+                         "weight of catch using current method")) %>%
+  select(-question.no) %>%
+  pivot_wider(names_from = question, values_from = response)
+
+cpue_summary <- cpue_pivot %>%
+  mutate_at(vars(`hours spent on the trip to access current method`,
+                 `weight of catch using current method`, 
+                 `number of fishing trips`,
+                 `hours spent on current method`), as.numeric) %>%
+  group_by(interview__id, hm_basic__id, p903r__id) %>% # group_by interviewee, household member (sometimes multiple interviews per houselhold) and fishing gear
+  summarise(cpue = `weight of catch using current method` / (`hours spent on the trip to access current method` * `hours spent on current method` * `number of fishing trips`)) %>%
+  ungroup()
+
+
+### NOTE: There are zeroes in all time columns (i.e., `hours spent on the trip to access current method`, `hours spent on current method`, `number of fishing trips`)
+# meaning no matter which column is used, CPUE is undefined (catch divided by zero) for certain respondents
+
+# FIX IT - turn this into a function?
+for (i in 1:length(unique(cpue_summary$p903r__id))) {
+  
+  
+  fishing_method <- unique(cpue_summary$p903r__id)[i]
+  
+  cpue_plot <- cpue_summary %>% 
+    filter(p903r__id == fishing_method) %>%
+    filter(cpue != "Inf") %>% # filters out when denominator is zero
+    filter(is.na(cpue)==FALSE) # filters out when numerator and denominator is zero
+  
+  p <- ggplot(cpue_plot, aes(x = cpue)) +
+    geom_histogram(bins = 20) +
+    labs(title = fishing_method, y = "", x = "CPUE")
+
+  # Print out each plot within R
+  print(p)
+  # Go to new page before printing next figure
+  cat("\n\n\\newpage\n")
+      
+  
+}
+
 
 ```
 
