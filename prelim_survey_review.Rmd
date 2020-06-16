@@ -1,13 +1,15 @@
 ---
 title: "Exploratory figures for CNHS"
 author: "Kelvin Gorospe and Jessica Gephart"
-date: "6/3/2020"
+date: "6/10/2020"
 output: pdf_document
 ---
 
 
 Notes for Mike:
 
+* Is it correct to remove the 0/1 columns in the market Survey data?
+* Is there a way to automate this process on your end? So that code still works with new data
 * Where is the market availability data that we had in the last iteration?
 * [name of product]_roster is the availability data
 * What is the meaning of NA in the multiselect variable columns?
@@ -19,6 +21,7 @@ Notes for Mike:
 * Variable labels are cut off (how do we get the full answers back?) see: var_labels
 * How to standardize units when none is given (e.g., question == Travel time outside boundary in outsideRoster dataset includes "12", "3", "30 minutes", "1 hour", etc)
 * Is a response of "zero" the same as blank response? 
+* What's the difference between interview__key and interview__id? Currently using both to join eventRoster, fishRoster, etc with vrs data to get island information
 
 Suggested path forward:
  
@@ -34,6 +37,10 @@ Suggested path forward:
 
 
 ```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
+
+### NOTE: only use this RMD file to create archipelago-wide plots (not grouped by island)
+### NOTE: to create plots grouped by island, use the "per_island" RMD file
+
 knitr::opts_chunk$set(echo = FALSE)
 library(haven)
 library(tidyverse)
@@ -76,8 +83,10 @@ var_labels <- var_labels %>%
 fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
+```
 
 
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize fisheries data
 #___________________________________________________________________________________________#
@@ -100,7 +109,7 @@ plot_multi_response(plotDF_multiselect)
 
 
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 # List short-answer, fill-in response questions here:
 fill_in_questions <- c("p903n", "p921n", "p922n1", "p922n2")
@@ -126,12 +135,579 @@ write.csv(other_answers, "Outputs/fisheries_other_answers.csv", row.names = FALS
 
 ```
 
+
+
+## Other Fisheries (p903r) data
+
+
+```{r, warning = FALSE}
+
+#___________________________________________________________________________________________#
+# Clean fisheries data
+#___________________________________________________________________________________________#
+fisheries_903 <- read_dta(file.path(datadir, "Fisheries", "p903r.dta"))
+
+fisheries_903 <- clean_data(fisheries_903)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(fisheries_903)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+fisheriesTidy_903 <- tidy_data(df = fisheries_903, pivot_col_1 = "p904", pivot_col_last = "p910", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+
+write.csv(fisheriesTidy_903, "Outputs/fisheriesTidy_903.csv", row.names = FALSE)
+
+
+# Output short answer responses for translation
+short_answers <- c("other method of transportation")
+# Short answers - units need to be standardized and some responses need to be translated
+
+other_answers <- fisheriesTidy_903 %>% 
+  filter(question %in% short_answers) %>%
+  filter(response != "") %>% 
+  unique() %>%
+  arrange(question)
+
+write.csv(other_answers, "Outputs/fisheries_903R_other_answers.csv", row.names = FALSE)
+
+
+# Filter out short answer responses before moving on to plotting data subsets
+fisheriesTidy_903 <- fisheriesTidy_903 %>%
+  filter(question %in% short_answers == FALSE)
+
+
+
+
+event_subsets <- fisheriesTidy_903 %>%
+  select(p903r__id) %>%
+  unique()
+
+event_subsets
+
+
+```
+
+
+## *Fishing Method: Trolling, jigging or deep water line fishing*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Trolling, jigging or deep water line fishing - Te kasiki") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Fishing Method: Handline (drop stone, pole fishing, rod &amp; reel) - Te karekare*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Handline (drop stone, pole fishing, rod &amp; reel) - Te karekare") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Fishing Method: Gleaning / Collecting*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Gleaning / Collecting") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Fishing Method: Other (note)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Other (note)") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Fishing Method: Spearfishing night (Te katebe te tairiki)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Spearfishing night (Te katebe te tairiki)") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Fishing Method: Spearfishing day ((Te katebe te ngaina)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Spearfishing day ((Te katebe te ngaina)") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Fishing Method: Net (beach seine, gill, cast) - Te karaun*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Net (beach seine, gill, cast) - Te karaun") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+## *Fishing Method: Freediving / diving without SCUBA (Te tebo)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Freediving / diving without SCUBA (Te tebo)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+## *Fishing Method: Traps (Te uu)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Traps (Te uu)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+## *Fishing Method: Diving with SCUBA (Te tebo me te bwai n ikeike)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_903 %>%
+  filter(p903r__id == "Diving with SCUBA (Te tebo me te bwai n ikeike)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## Other Fisheries (p922r) data
+
+
+```{r, warning = FALSE}
+
+#___________________________________________________________________________________________#
+# Clean fisheries data
+#___________________________________________________________________________________________#
+fisheries_922 <- read_dta(file.path(datadir, "Fisheries", "p922r.dta"))
+
+fisheries_922 <- clean_data(fisheries_922)[[1]]
+
+# Extract variable label attributes
+var_labels <- clean_data(fisheries_922)[[2]]
+
+# Change class to character to allow left_join without warning below
+var_labels <- var_labels %>%
+  mutate(col.names = as.character(col.names))
+
+# Make tidy
+fisheriesTidy_922 <- tidy_data(df = fisheries_922, pivot_col_1 = "p923", pivot_col_last = "p925", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+
+write.csv(fisheriesTidy_922, "Outputs/fisheriesTidy_922.csv", row.names = FALSE)
+
+
+event_subsets <- fisheriesTidy_922 %>%
+  select(p922r__id) %>%
+  unique()
+
+event_subsets
+
+```
+
+## *Catch: Tuna (skipjack, yellow fin, etc.)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Tuna (skipjack, yellow fin, etc.)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Carnivorous reef fish (emperor, snapper, jacks etc.)  *
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Carnivorous reef fish (emperor, snapper, jacks etc.)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Catch: Other oceanic fish (Wahoo, mahi mahi, rainbow runner, billfish, etc.)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Other oceanic fish (Wahoo, mahi mahi, rainbow runner, billfish, etc.)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Land crab (mud crab, coconut crab, etc.)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Land crab (mud crab, coconut crab, etc.)") %>%
+  filter(response != "") %>%
+  filter(response != 0) # NOTE: ONLY DO THIS FOR *Catch: Land crab (mud crab, coconut crab, etc.)* - all zeroes, breaks function
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Catch: Other catch(note)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Other catch(note)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Catch: Herbivorous reef fish (parrotfish, rabbitfish, surgeonfish, etc.)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Herbivorous reef fish (parrotfish, rabbitfish, surgeonfish, etc.)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Lagoon and sand flat fish (goatfish, silver biddy, mullet, bonefish, milkfish etc)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Lagoon and sand flat fish (goatfish, silver biddy, mullet, bonefish, milkfish etc)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Lobsters*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Lobsters") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Sea worm / peanut worm (ipo worm)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Sea worm / peanut worm (ipo worm)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Catch: Other non-finfish (note) - other bivalves, ocean crabs, octopus, etc*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Other non-finfish (note) - other bivalves, ocean crabs, octopus, etc") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Catch: Cockles (arc shell, te bun)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Cockles (arc shell, te bun)") %>%
+  filter(response != "")
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+
+## *Catch: Sea snails (trochus, etc)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Sea snails (trochus, etc)") %>%
+  filter(response != "") %>%
+  filter(response != 0) # NOTE: Only do this for Sea snails (trochus, etc) - all zeroes breaks code
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Sea noodles / sea grapes*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Sea noodles / sea grapes") %>%
+  filter(response != "") %>%
+  filter(response != 0) # NOTE: Only do this for sea noodles/ sea grapes - all zeroes breaks code
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Other fish (flying fish, etc.) (note)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Other fish (flying fish, etc.) (note)") %>%
+  filter(response != "") 
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+## *Catch: Sharks*: No data
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+#plotDF_single <- fisheriesTidy_922 %>%
+#  filter(p922r__id == "Sharks)") 
+
+# Plot histogram
+#plot_single_response(plotDF_single, bin_n = 20)
+
+```
+## *Catch: Aquarium trade (coral sponges, small colorful fish)*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Aquarium trade (coral sponges, small colorful fish)") %>%
+  filter(response != "") %>%
+  filter(response != 0) # Only do this for aquarium trade - all zeroes - breaks function
+
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Clams*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Clams") %>%
+  filter(response != "") 
+
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
+## *Catch: Sea cucumber*
+
+```{r, fig.height = 8, results = 'asis'}
+#___________________________________________________________________________________________#
+# Visualize data
+#___________________________________________________________________________________________#
+# Note: Roster is all single-select questions: no filtering needed; subset by event_subsets
+
+plotDF_single <- fisheriesTidy_922 %>%
+  filter(p922r__id == "Sea cucumber") %>%
+  filter(response != "") %>%
+  filter(response != 0) # Note: only do this for sea cucumber - all zeroes - breaks function
+
+
+# Plot histogram
+plot_single_response(plotDF_single, bin_n = 20)
+
+```
+
 ## VRS Data
 ### *Multi-response questions*
 
-
-
-```{r, warning=FALSE}
+```{r, warning=FALSE, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Clean VRS data
@@ -173,7 +749,7 @@ plot_multi_response(plotDF_multiselect)
 ### *Single response questions*
 
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 # Plot histogram for each single response question while removing zeroes
 
 # List short-answer, fill-in response questions here:
@@ -267,7 +843,7 @@ event_subsets
 
 ## *Event: Coral bleaching*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -285,7 +861,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Event: Cyclone*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -303,7 +879,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Event: Harmful algal bloom*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -321,7 +897,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Event: Tsunami*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -367,7 +943,7 @@ event_subsets
 ```
 ### *Asset: Fibreglass boats*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -383,7 +959,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 ```
 ## *Asset: Outboard Motors*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -403,7 +979,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Fishing Nets (gillnet)*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -420,7 +996,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Spearguns*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -440,7 +1016,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Fishing Lines*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -459,7 +1035,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Active Fish Traps*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -478,7 +1054,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Underwater flashlights*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -495,7 +1071,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Wood canoes*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -513,7 +1089,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Eskies/portable coolers*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -533,7 +1109,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: SCUBA diving equipment*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -552,7 +1128,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Freezers (electric or propane)*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -572,7 +1148,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Ice machines*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -592,7 +1168,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Fishing Nets (purse)*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -609,7 +1185,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Drag Nets*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -628,7 +1204,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Harpoons/Spears*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -646,7 +1222,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: FAD (Fish Aggregating Device)*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -664,7 +1240,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Other Fishing Equipment (note)*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -704,15 +1280,12 @@ var_labels <- var_labels %>%
 # Make tidy
 outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "village_distance_out", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
 
-# Filter out short answer responses before moving on to plotting data subsets
-short_answers <- c("Other transport mode outside boundary", "Travel time outside boundary")
-# Short answers - units need to be standardized and some responses need to be translated
-
-outsideRosterTidy <- outsideRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
 write.csv(outsideRosterTidy, "Outputs/outsideRosterTidy.csv", row.names = FALSE)
 
+
+# List short answers here:
+short_answers <- c("Other transport mode outside boundary", "Travel time outside boundary")
+# Short answers - units need to be standardized and some responses need to be translated
 
 # Output short answer responses for translation
 other_answers <- outsideRosterTidy %>% 
@@ -721,6 +1294,10 @@ other_answers <- outsideRosterTidy %>%
   unique()
 
 write.csv(other_answers, "Outputs/outsideRoster_other_answers.csv", row.names = FALSE)
+
+# Filter out short answer responses before moving on to plotting data subsets
+outsideRosterTidy <- outsideRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 
 
@@ -735,7 +1312,7 @@ event_subsets
 
 ## *Asset: Clinic/Hospital*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -755,7 +1332,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Bank*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -775,7 +1352,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset:  Nearest Market*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -794,7 +1371,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset:  Nearest Post Office*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -815,7 +1392,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Credit Facility*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -834,7 +1411,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Police Station*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -857,7 +1434,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Court House*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -876,7 +1453,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Airport*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -897,7 +1474,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -918,7 +1495,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest fish landing site*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -940,7 +1517,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Church*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -982,16 +1559,13 @@ shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "catch_receiver__1"
 
 
 
-# Filter out short answer responses before moving on to plotting data subsets
+write.csv(shareRosterTidy, "Outputs/shareRosterTidy.csv", row.names = FALSE)
+
+
+
+# Short answers - units need to be standardized and some responses need to be translated
 short_answers <- c("Other giver of the sharing of catches", "Other receiver from the sharing of catches", "Other relationship from the sharing of catches",
                    "Other sharer of the catches")
-# Short answers - units need to be standardized and some responses need to be translated
-
-shareRosterTidy <- shareRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
-write.csv(shareRosterTidy, "Outputs/shareRosterTidy", row.names = FALSE)
-
 
 # Output short answer responses for translation
 other_answers <- shareRosterTidy %>% 
@@ -1001,6 +1575,9 @@ other_answers <- shareRosterTidy %>%
 
 write.csv(other_answers, "Outputs/shareRoster_other_answers.csv", row.names = FALSE)
 
+# Filter out short answer responses before moving on to plotting data subsets
+shareRosterTidy <- shareRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 
 event_subsets <- shareRosterTidy %>%
@@ -1016,7 +1593,7 @@ event_subsets
 
 ## *Asset: Finfish*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1039,7 +1616,7 @@ plot_multi_response(plotDF_multiple_response)
 
 ## *Asset: Other non-finfish seafood (shellfish, sea worm, etc.)*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1048,7 +1625,7 @@ plot_multi_response(plotDF_multiple_response)
 
 plotDF_multiple_response <- shareRosterTidy %>%
   filter(share_roster__id == "Other non-finfish seafood (shellfish, sea worm, etc.)")  %>%
-  filter(is.na(option)==FALSE) %>% # Removes all "shared individually or through institution" question - all blank
+  filter(is.na(option)==FALSE) %>%
   filter(response == "1")
 
 
@@ -1063,7 +1640,7 @@ plot_multi_response(plotDF_multiple_response)
 
 ## *Asset: Non-fish foods*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1072,7 +1649,7 @@ plot_multi_response(plotDF_multiple_response)
 
 plotDF_multiple_response <- shareRosterTidy %>%
   filter(share_roster__id == "Non-fish foods")  %>%
-  filter(is.na(option)==FALSE) %>% # Removes all "shared individually or through institution" question - all blank
+  filter(is.na(option)==FALSE) %>%
   filter(response == "1")
 
 
@@ -1108,16 +1685,10 @@ var_labels <- var_labels %>%
 # Make tidy
 vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
 
-# Filter out short answer responses before moving on to plotting data subsets
-short_answers <- c("Other position of the respondent")
-# Short answers - units need to be standardized and some responses need to be translated
-
-vrsRosterTidy <- vrsRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
-
 write.csv(vrsRosterTidy, "Outputs/vrsRosterTidy.csv", row.names = FALSE)
 
+# Short answers - units need to be standardized and some responses need to be translated
+short_answers <- c("Other position of the respondent")
 
 # Output short answer responses for translation
 other_answers <- vrsRosterTidy %>% 
@@ -1127,7 +1698,9 @@ other_answers <- vrsRosterTidy %>%
 
 write.csv(other_answers, "Outputs/vrsRoster_other_answers.csv", row.names = FALSE)
 
-
+# Filter out short answer responses before moving on to plotting data subsets
+vrsRosterTidy <- vrsRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 event_subsets <- vrsRosterTidy %>%
   select(vrs_roster__id) %>%
@@ -1145,7 +1718,7 @@ event_subsets
 
 ## *VRS Roster: 1*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -1172,7 +1745,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 #___________________________________________________________________________________________#
 # Note: VRS Roster 2 only contains one individual with the following characteristics
 
-vrsRosterTidy %>% filter(vrs_roster__id==2)
+#vrsRosterTidy %>% filter(vrs_roster__id==2)
 
 
 ```
@@ -1198,17 +1771,10 @@ var_labels <- var_labels %>%
 # Make tidy
 withinRosterTidy <- tidy_data(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
 
-# Filter out short answer responses before moving on to plotting data subsets
-short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
-# Short answers - units need to be standardized and some responses need to be translated
-
-
-withinRosterTidy <- withinRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
-
 write.csv(withinRosterTidy, "Outputs/withinRosterTidy.csv", row.names = FALSE)
 
+# Short answers - units need to be standardized and some responses need to be translated
+short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
 
 # Output short answer responses for translation
 other_answers <- withinRosterTidy %>% 
@@ -1218,7 +1784,9 @@ other_answers <- withinRosterTidy %>%
 
 write.csv(other_answers, "Outputs/withinRoster_other_answers.csv", row.names = FALSE)
 
-
+# Filter out short answer responses before moving on to plotting data subsets
+withinRosterTidy <- withinRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 event_subsets <- withinRosterTidy %>%
   select(within_roster__id) %>%
@@ -1236,7 +1804,7 @@ event_subsets
 
 ## *Asset: Nearest Church*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1253,7 +1821,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1271,7 +1839,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Airport*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1290,7 +1858,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Clinic/Hospital*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1309,7 +1877,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest fish landing site*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1328,7 +1896,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Credit Facility*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1346,7 +1914,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Market*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1363,7 +1931,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Post Office*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1381,7 +1949,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Nearest Court House*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1398,7 +1966,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Asset: Bank*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -1415,7 +1983,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 
 ## *Market survey*
 
-```{r, warning=FALSE}
+```{r, warning = FALSE, message = FALSE, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Clean market data
 #___________________________________________________________________________________________#
@@ -1424,6 +1992,8 @@ market.files <- list.files("Data/HIES_raw_19May20/Market Survey")
 # ID unique food items
 food.files <- unique(gsub("_.*", '', market.files))
 food.files <- food.files[food.files != "MarketSurvey.dta"]
+
+food.items <- food.files
 food.items[food.items == "veges"] <- "vege" # make singular (have to keep plural to read in file)
 
 # Combine food and unit rosters
@@ -1431,6 +2001,8 @@ food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey",
                                     paste(food.files[1], "roster.dta", sep ="_")))
 unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
                                     paste(food.files[1], "unit", "roster.dta", sep ="_")))
+
+# FIX IT - JG, not understanding what this was for:
 # Standardize column names
 colnames(food.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(food.roster))
 colnames(unit.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(unit.roster))
