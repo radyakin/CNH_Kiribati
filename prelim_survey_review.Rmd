@@ -2188,15 +2188,27 @@ market_survey_price <- marketSurvey %>%
                                      TRUE ~ unit_roster__id)) %>%
   # Standardize units (first, standardize WITHIN metric and within US units)
   mutate(weight = if_else(unit_roster__id == "(kg) Kilograms", true = weight * 1000, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(kg) Kilogram", true = "(g) Grams", false = unit_roster__id)) %>%
+         unit_roster__id = if_else(unit_roster__id == "(kg) Kilograms", true = "(g) Grams", false = unit_roster__id)) %>%
   mutate(weight = if_else(unit_roster__id == "(ml) Milliliters", true = weight / 1000, false = weight),
          unit_roster__id = if_else(unit_roster__id == "(ml) Milliliters", true = "(ltr) Litres", false = unit_roster__id)) %>%
   mutate(weight = if_else(unit_roster__id == "(lbs) Pounds", true = weight * 16, false = weight),
          unit_roster__id = if_else(unit_roster__id == "(lbs) Pounds", true = "(oz) Ounces", false = unit_roster__id)) %>%
   mutate(weight = if_else(unit_roster__id == "(c) Cups", true = weight / 16, false = weight),
          unit_roster__id = if_else(unit_roster__id == "(c) Cups", true = "(gal) Gallons", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(c) Cups", true = weight / 16, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(c) Cups", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(pt) Pints", true = weight / 8, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(pt) Pints", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(qt) Quarts", true = weight / 4, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(qt) Quarts", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  # Standardize all to metric (convert ounces to grams, gallons to liters)
+  mutate(weight = if_else(unit_roster__id == "(oz) Ounces", true = weight * 28.35, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(oz) Ounces", true = "(g) Grams", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(gal) Gallons", true = weight * 3.78, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(gal) Gallons", true = "(ltr) Litres", false = unit_roster__id)) 
+
+# NOW PLOT:
+
+
+  
 
   
   
