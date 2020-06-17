@@ -158,3 +158,37 @@ plot.food.availability <- function(plotDF_food, incl_island = FALSE){
     cat("\n\n\\newpage\n")
   }
 }
+
+
+
+###################################################################################################################################################
+
+plot.food.prices <- function(plotDF_food, incl_island = FALSE){
+
+  
+  # Create plot for each food item
+  for(i in 1:length(unique(plotDF_food$roster__id))){
+    
+    if (incl_island == TRUE){
+      p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
+                  aes(x = availability)) +
+        geom_bar() +
+        labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
+        theme(axis.text.x = element_text(size = 8, angle = 90, hjust = 1, vjust = 0.5)) +
+        facet_wrap(~ms_island)
+    } else {
+      
+      p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
+                  aes(x = availability)) +
+        geom_bar() +
+        labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    }
+    
+    
+    # Print out each plot within R
+    print(p)
+    # Go to new page before printing next figure
+    cat("\n\n\\newpage\n")
+  }
+}

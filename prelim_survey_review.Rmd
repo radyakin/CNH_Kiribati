@@ -2034,7 +2034,8 @@ plot_single_response(plotDF_single, bin_n = 20)
 ```
 
 
-## *Market survey*
+### Market survey
+## Food availability
 
 ```{r, warning = FALSE, message = FALSE, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
@@ -2136,5 +2137,74 @@ marketSurvey <- full_join(survey.info, marketSurvey, by = c("interview__key", "i
 
 # Plot food item availability
 plot.food.availability(marketSurvey)
+
+```
+
+
+
+
+### Market survey continued... 
+## Food prices
+
+```{r, warning = FALSE, message = FALSE, fig.height = 8, results = 'asis'}
+
+# Clean price data
+
+# Question for Mike: why are their duplicates in price information within marketSurvey?
+market_survey_price_duplicates <- marketSurvey %>% group_by(interview__id, roster__id, price, weight) %>% summarise(n=n()) %>% filter(n>1) %>% left_join(marketSurvey, by = c("interview__id", "roster__id", "price", "weight")) %>% ungroup() %>% select(-n) %>% arrange(interview__id)
+write.csv(market_survey_price_duplicates, file = file.path(outdir, "market_survey_price_duplicates.csv"), row.names = FALSE) # n = 68
+
+
+# FOODS WITH NO WEIGHT UNITS:
+market_survey_no_weight <- marketSurvey %>%
+  mutate(unit_roster__id = as.character(unit_roster__id)) %>%
+  filter(unit_roster__id %in% c("Bundle / Bunch / Pack", "Each / Piece", "Can / Bottle", "Box / Carton", "Bag", "Other units", "Bucket", "Plate / Bowl", "Basket") & is.na(unit_other))
+write.csv(market_survey_no_weight, file = file.path(outdir, "market_survey_no_weight.csv"), row.names = FALSE) # n = 1
+
+# market_survey_price <- plotDF_food %>% group_by(interview__id, roster__id, price, weight) %>% mutate(n=n()) %>% arrange(desc(n)) %>% filter(row_number()==1) %>% ungroup() %>% select(-n)# keep top row of each grouping
+# Inspect and standardize units: 
+# market_survey_price %>% select(unit_roster__id, unit_other) %>% unique() %>% print(n=40) 
+
+# STANDARDIZE PRICES
+market_survey_price <- marketSurvey %>% 
+  group_by(interview__id, roster__id, price, weight) %>% 
+  mutate(n=n()) %>% 
+  arrange(desc(n)) %>% 
+  filter(row_number()==1) %>% 
+  ungroup() %>% 
+  select(-n) %>%
+  arrange(interview__id) %>% 
+  # Where it exists, use unit_other to replace unit_roster__id, but first mutate to character
+  mutate(unit_roster__id = as.character(unit_roster__id),
+         unit_other = as.character(unit_other)) %>%
+  mutate(unit_roster__id = if_else(is.na(unit_other)==FALSE, true = unit_other, false = unit_roster__id)) %>%
+  # Filter out foods with no weight units (n=1):
+  filter(unit_roster__id != "Each / Piece") %>% 
+  # Standardize FORMAT of units: (g) Grams vs grams (g) 
+  mutate(unit_roster__id = case_when(unit_roster__id == "grams (g)" ~ "(g) Grams",
+                                     unit_roster__id == "Pounds (lb)" ~ "(lbs) Pounds",
+                                     unit_roster__id == "Kilograms (kg)" ~ "(kg) Kilograms",
+                                     unit_roster__id == "(kg) Kilo-grams" ~ "(kg) Kilograms",
+                                     TRUE ~ unit_roster__id)) %>%
+  # Standardize units (first, standardize WITHIN metric and within US units)
+  mutate(weight = if_else(unit_roster__id == "(kg) Kilograms", true = weight * 1000, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(kg) Kilogram", true = "(g) Grams", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(ml) Milliliters", true = weight / 1000, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(ml) Milliliters", true = "(ltr) Litres", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(lbs) Pounds", true = weight * 16, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(lbs) Pounds", true = "(oz) Ounces", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(c) Cups", true = weight / 16, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(c) Cups", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(c) Cups", true = weight / 16, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(c) Cups", true = "(gal) Gallons", false = unit_roster__id)) %>%
+
+  
+  
+  
+  
+
+# Mass: (g) Grams, grams(g), (lbs Pounds, Pounds (lb))
+
+# Plot 
 
 ```
