@@ -301,7 +301,7 @@ var_labels <- var_labels %>%
 eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
 
 # Output question list
-write.csv(unique(eventRosterTidy$question), "outputs/evenRoster_question_list.csv", row.names = FALSE)
+write.csv(unique(eventRosterTidy$question), "outputs/eventRoster_question_list.csv", row.names = FALSE)
 
 
 # Clean responses for "Time of occurrence of event" should be years
