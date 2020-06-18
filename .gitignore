@@ -1,6 +1,6 @@
 Data/*
 Outputs/*
 .Rproj.user
-.Rproj
-.pdf
+*.Rproj
+*.pdf
 .Rhistory
