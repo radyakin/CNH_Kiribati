@@ -80,6 +80,10 @@ var_labels <- var_labels %>%
 fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
+
+# Output QUESTION list:
+write.csv(unique(fisheriesTidy$question), "outputs/fisheries_question_list.csv", row.names = FALSE)
+
 ```
 
 
@@ -159,6 +163,8 @@ vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "ms_island", pivot_col_last = "assi
 
 write.csv(vrsTidy, "Outputs/vrsTidy.csv", row.names = FALSE)
 
+# Output question list
+write.csv(unique(vrsTidy$question), "outputs/vrs_question_list.csv", row.names = FALSE)
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -202,7 +208,6 @@ plotDF_single <- vrsTidy %>%
 
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-# FIX IT, what is question = 50???
 
 # Output short answer responses for translation
 other_answers <- vrsTidy %>% 
@@ -212,6 +217,49 @@ other_answers <- vrsTidy %>%
   arrange(question)
 
 write.csv(other_answers, "Outputs/vrs_other_answers.csv", row.names = FALSE)
+
+# Output sample sizes:
+vrs_sample_per_village <- vrsTidy %>% 
+  group_by(question, vrs_island, vrs_village) %>%
+  summarise(n = n(), n_blank = sum(response == "")) %>%
+  mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no")) 
+
+write.csv(vrs_sample_per_village, "Outputs/vrs_sample_per_village.csv", row.names = FALSE)
+
+# What if we remove all_blank==yes, all multi-select questions (whenever option = NA), and all fill-in-the-blank questions
+vrs_sample_per_village_cleaned <- vrsTidy %>% 
+  filter(is.na(option)) %>%
+  filter(question %in% fill_in_questions == FALSE) %>%
+  group_by(question, vrs_island, vrs_village) %>%
+  summarise(n = n(), n_blank = sum(response == "")) %>%
+  mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no")) %>%
+  filter(all_blank != "yes")
+
+write.csv(vrs_sample_per_village_cleaned, "Outputs/vrs_sample_per_village_cleaned.csv", row.names = FALSE)
+
+
+vrs_sample_per_island <- vrsTidy %>% 
+  group_by(question, vrs_island) %>%
+  summarise(n = n(), n_blank = sum(response == "")) %>%
+  mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no"))
+
+write.csv(vrs_sample_per_island, "Outputs/vrs_sample_per_island.csv", row.names = FALSE)
+
+vrs_sample_overall <- vrsTidy %>% 
+  group_by(question) %>%
+  summarise(n = n(), n_blank = sum(response == "")) %>%
+  mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no"))
+
+write.csv(vrs_sample_overall, "Outputs/vrs_sample_overall.csv", row.names = FALSE)
+
+# Output questions with zero answers for confirmation
+vrs_no_responses <- vrsTidy %>% 
+  group_by(question) %>%
+  summarise(n = n(), n_blank = sum(response == "")) %>%
+  mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no")) %>%
+  filter(all_blank == "yes")
+  
+write.csv(vrs_no_responses, "Outputs/vrs_no_responses.csv", row.names = FALSE)
 
 
 
@@ -252,6 +300,8 @@ var_labels <- var_labels %>%
 # Make tidy
 eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
 
+# Output question list
+write.csv(unique(eventRosterTidy$question), "outputs/evenRoster_question_list.csv", row.names = FALSE)
 
 
 # Clean responses for "Time of occurrence of event" should be years
@@ -376,6 +426,11 @@ var_labels <- var_labels %>%
 fishassetRosterTidy <- tidy_data(df = fishassetRoster, pivot_col_1 = "num_assets", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
 
 write.csv(fishassetRosterTidy, "Outputs/fishassetRosterTidy.csv", row.names = FALSE)
+
+# Output question list
+write.csv(unique(fishassetRosterTidy$question), "outputs/fishassetRoster_question_list.csv", row.names = FALSE)
+
+
 
 event_subsets <- fishassetRosterTidy %>%
   select(fish_asset_roster__id) %>%
@@ -732,6 +787,8 @@ outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "village_distan
 
 write.csv(outsideRosterTidy, "Outputs/outsideRosterTidy.csv", row.names = FALSE)
 
+# Output question list
+write.csv(unique(outsideRosterTidy$question), "outputs/outsideRosterTidy_question_list.csv", row.names = FALSE)
 
 
 # Output short answers
@@ -1019,6 +1076,11 @@ shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "catch_receiver__1"
 
 write.csv(shareRosterTidy, "Outputs/shareRosterTidy.csv", row.names = FALSE)
 
+# Output QUESTION list:
+write.csv(unique(shareRosterTidy$question), "outputs/shareRoster_question_list.csv", row.names = FALSE)
+
+
+
 # List short answer questions
 short_answers <- c("Other giver of the sharing of catches", "Other receiver from the sharing of catches", "Other relationship from the sharing of catches",
                    "Other sharer of the catches")
@@ -1154,6 +1216,10 @@ vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_la
 write.csv(vrsRosterTidy, "Outputs/vrsRosterTidy.csv", row.names = FALSE)
 
 
+# Output QUESTION list:
+write.csv(unique(vrsRosterTidy$question), "outputs/vrsRoster_question_list.csv", row.names = FALSE)
+
+
 # List short answer questions
 short_answers <- c("Other position of the respondent")
 # Short answers - units need to be standardized and some responses need to be translated
@@ -1251,6 +1317,10 @@ var_labels <- var_labels %>%
 withinRosterTidy <- tidy_data(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
 
 write.csv(withinRosterTidy, "Outputs/withinRosterTidy.csv", row.names = FALSE)
+
+
+# Output QUESTION list:
+write.csv(unique(withinRosterTidy$question), "outputs/withinRoster_question_list.csv", row.names = FALSE)
 
 # List short answer questions:
 short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
@@ -1562,6 +1632,17 @@ survey.info <- survey.info %>%
   select("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")
 
 marketSurvey <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
+
+write.csv(marketSurvey, file.path(outdir, "marketSurveyTidy.csv"), row.names=FALSE)
+
+
+# Output sample sizes:
+market_survey_sample_per_village <- marketSurvey %>% 
+  group_by(ms_island, ms_village) %>%
+  summarise(n_market = length(unique(ea_market)), n_foods = length(unique(roster__id)))
+
+write.csv(market_survey_sample_per_village, file.path(outdir, "market_survey_sample_per_village.csv"), row.names=FALSE)
+
 
 # Output short answer responses for translation
 other_answers <- marketSurvey %>%
