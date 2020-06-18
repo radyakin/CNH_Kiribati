@@ -2156,14 +2156,16 @@ write.csv(market_survey_price_duplicates, file = file.path(outdir, "market_surve
 
 
 # FOODS WITH NO WEIGHT UNITS:
-market_survey_no_weight <- marketSurvey %>%
+market_survey_no_weight_unit <- marketSurvey %>%
   mutate(unit_roster__id = as.character(unit_roster__id)) %>%
   filter(unit_roster__id %in% c("Bundle / Bunch / Pack", "Each / Piece", "Can / Bottle", "Box / Carton", "Bag", "Other units", "Bucket", "Plate / Bowl", "Basket") & is.na(unit_other))
-write.csv(market_survey_no_weight, file = file.path(outdir, "market_survey_no_weight.csv"), row.names = FALSE) # n = 1
+write.csv(market_survey_no_weight_unit, file = file.path(outdir, "market_survey_no_weight_unit.csv"), row.names = FALSE) # n = 1
 
-# market_survey_price <- plotDF_food %>% group_by(interview__id, roster__id, price, weight) %>% mutate(n=n()) %>% arrange(desc(n)) %>% filter(row_number()==1) %>% ungroup() %>% select(-n)# keep top row of each grouping
-# Inspect and standardize units: 
-# market_survey_price %>% select(unit_roster__id, unit_other) %>% unique() %>% print(n=40) 
+# FOODS WITH NO WEIGHT MEASUREMENT (usually things that are measured with unit_roster__id == Each/Piece usually also has an entry for weight and unit_other, but these do not)
+market_survey_no_weight <- marketSurvey %>% 
+  filter(weight ==0)
+write.csv(market_survey_no_weight, file = file.path(outdir, "market_survey_no_weight.csv"), row.names = FALSE) # n = 17
+
 
 # STANDARDIZE PRICES
 market_survey_price <- marketSurvey %>% 
@@ -2180,6 +2182,8 @@ market_survey_price <- marketSurvey %>%
   mutate(unit_roster__id = if_else(is.na(unit_other)==FALSE, true = unit_other, false = unit_roster__id)) %>%
   # Filter out foods with no weight units (n=1):
   filter(unit_roster__id != "Each / Piece") %>% 
+  # Filter out foods with no weight measurements (n=17)
+  filter(weight != 0) %>% 
   # Standardize FORMAT of units: (g) Grams vs grams (g) 
   mutate(unit_roster__id = case_when(unit_roster__id == "grams (g)" ~ "(g) Grams",
                                      unit_roster__id == "Pounds (lb)" ~ "(lbs) Pounds",
@@ -2203,20 +2207,56 @@ market_survey_price <- marketSurvey %>%
   mutate(weight = if_else(unit_roster__id == "(oz) Ounces", true = weight * 28.35, false = weight),
          unit_roster__id = if_else(unit_roster__id == "(oz) Ounces", true = "(g) Grams", false = unit_roster__id)) %>%
   mutate(weight = if_else(unit_roster__id == "(gal) Gallons", true = weight * 3.78, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(gal) Gallons", true = "(ltr) Litres", false = unit_roster__id)) 
+         unit_roster__id = if_else(unit_roster__id == "(gal) Gallons", true = "(ltr) Litres", false = unit_roster__id)) %>%
+  # Now calculate PRICE per UNIT WEIGHT
+  mutate(standardized_price = price / weight)
 
 # NOW PLOT:
 
+plot.food.prices(market_survey_price)
+  
+# FOODS with mixed units:  note, can get this list by allowing print(food) to run in plot.food.prices function
+mixed_units <- c("Cordial, syrup, not further specified",
+                 "Cooking oil &amp; fats",
+                 "Canned meat, corned beef",
+                 "Chocolate in bars or in slabs",
+                 "Toffees, pastilles and other confectionery products",
+                 "Other non alcoholic beverages",
+                 "Noodles, pasta",
+                 "Other diary and oil product",
+                 "Brown coconut",
+                 "Chewing gum",
+                 "Ice block, icies, ice frubu etc",
+                 "Chinese sweets (mango skin, pawpaw skin etc",
+                 "Ice cream",
+                 "Bottled water/spring water/mineral water",
+                 "Cola flavour soft drink eg. Coca cola/Pepsi",
+                 "Soft drinks (Fizzy), eg. Sprite, 7 Up, Tonic, Fanta,",
+                 "Fruit juice (apple, pineapple, tropical etc...)",
+                  "Lollies",
+                 "Ice cream cones",
+                 "Other fruit (specify)"
+                 )
 
-  
 
-  
-  
-  
-  
+market_survey_diff_units <- market_survey_price %>%
+  filter(roster__id %in% mixed_units) %>%
+  arrange(roster__id)
 
-# Mass: (g) Grams, grams(g), (lbs Pounds, Pounds (lb))
+write.csv(market_survey_diff_units, file = file.path(outdir, "market_survey_diff_units.csv"), row.names = FALSE)
 
-# Plot 
+
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+

@@ -169,26 +169,67 @@ plot.food.prices <- function(plotDF_food, incl_island = FALSE){
   # Create plot for each food item
   for(i in 1:length(unique(plotDF_food$roster__id))){
     
+    
+    food <- unique(plotDF_food$roster__id)[i]
+    
+    plotDF_food_i <- plotDF_food %>% filter(roster__id == food)
+    
+    unit <- plotDF_food_i %>% pull(unit_roster__id) %>% unique()
+    
+    
+    #if (length(unit) != 1){
+    #  print(food)
+    #}
+    #if (length(unit) == 1 ){
+    #  x_axis <- paste("price per", unit)
+    #  
+    #  if (incl_island == TRUE){
+    #    p <- ggplot(plotDF_food_i,
+    #                aes(x = standardized_price)) +
+    #      geom_histogram(bins = 20) +
+    #      labs(title = food, y = "", x = x_axis) +
+    #      facet_wrap(~ms_island)
+    #  } else {
+    #    
+    #    p <- ggplot(plotDF_food_i,
+    #                aes(x = standardized_price)) +
+    #      geom_histogram(bins = 20) +
+    #      labs(title = food, y = "", x = x_axis)
+    #    
+    #  }
+    
+    
+    if (length(unit) != 1){ # Keep only the most common unit
+      most_common_unit <- plotDF_food_i %>% count(unit_roster__id) %>% arrange(desc(n)) %>% filter(row_number()==1) %>% pull(unit_roster__id)
+      plotDF_food_i <- plotDF_food_i %>%
+        filter(unit_roster__id == most_common_unit)
+    }
+    
+    
+    x_axis <- paste("price per", unit)
+    
     if (incl_island == TRUE){
-      p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
-                  aes(x = availability)) +
-        geom_bar() +
-        labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
-        theme(axis.text.x = element_text(size = 8, angle = 90, hjust = 1, vjust = 0.5)) +
+      p <- ggplot(plotDF_food_i,
+                  aes(x = standardized_price)) +
+        geom_histogram(bins = 20) +
+        labs(title = food, y = "", x = x_axis) +
         facet_wrap(~ms_island)
     } else {
       
-      p <- ggplot(plotDF_food %>% filter(roster__id == unique(plotDF_food$roster__id)[i]), 
-                  aes(x = availability)) +
-        geom_bar() +
-        labs(title = paste(unique(plotDF_food$roster__id)[i]), y = "", x = "") +
-        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+      p <- ggplot(plotDF_food_i,
+                  aes(x = standardized_price)) +
+        geom_histogram(bins = 20) +
+        labs(title = food, y = "", x = x_axis)
     }
-    
     
     # Print out each plot within R
     print(p)
     # Go to new page before printing next figure
     cat("\n\n\\newpage\n")
+    
   }
+
+  
 }
+
+
