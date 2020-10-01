@@ -45,9 +45,12 @@ library(ggplot2)
 
 #___________________________________________________________________________________________#
 # Read in dta files
-#___________________________________________________________________________________________#
-datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
-outdir <- file.path(getwd(), "Outputs")
+# ___________________________________________________________________________________________#
+# datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
+# outdir <- file.path(getwd(), "Outputs")
+datadir <- "/Volumes/jgephart/Kiribati/HIES_raw_19May20"
+outdir <- "/Volumes/jgephart/Kiribati/Outputs"
+
 
 source("R_scripts/cleaning_functions.R")
 source("R_scripts/plotting_functions.R")
@@ -79,10 +82,10 @@ var_labels <- var_labels %>%
 # Make tidy
 fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
-write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
+write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
 
 # Output QUESTION list:
-write.csv(unique(fisheriesTidy$question), "outputs/fisheries_question_list.csv", row.names = FALSE)
+write.csv(unique(fisheriesTidy$question), file.path(outdir, "fisheries_question_list.csv"), row.names = FALSE)
 
 ```
 
@@ -130,7 +133,7 @@ other_answers <- fisheriesTidy %>%
   unique() %>%
   arrange(question)
 
-write.csv(other_answers, "Outputs/fisheries_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "fisheries_other_answers.csv"), row.names = FALSE)
 
 
 
@@ -161,10 +164,10 @@ var_labels <- var_labels %>%
 # Make tidy
 vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "ms_island", pivot_col_last = "assignment__id", var_labels = var_labels, question_no = FALSE)
 
-write.csv(vrsTidy, "Outputs/vrsTidy.csv", row.names = FALSE)
+write.csv(vrsTidy, file.path(outdir, "vrsTidy.csv"), row.names = FALSE)
 
 # Output question list
-write.csv(unique(vrsTidy$question), "outputs/vrs_question_list.csv", row.names = FALSE)
+write.csv(unique(vrsTidy$question), file.path(outdir, "vrs_question_list.csv"), row.names = FALSE)
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -216,7 +219,7 @@ other_answers <- vrsTidy %>%
   unique() %>%
   arrange(question)
 
-write.csv(other_answers, "Outputs/vrs_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "vrs_other_answers.csv"), row.names = FALSE)
 
 # Output sample sizes:
 vrs_sample_per_village <- vrsTidy %>% 
@@ -224,7 +227,7 @@ vrs_sample_per_village <- vrsTidy %>%
   summarise(n = n(), n_blank = sum(response == "")) %>%
   mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no")) 
 
-write.csv(vrs_sample_per_village, "Outputs/vrs_sample_per_village.csv", row.names = FALSE)
+write.csv(vrs_sample_per_village, file.path(outdir, "vrs_sample_per_village.csv"), row.names = FALSE)
 
 # What if we remove all_blank==yes, all multi-select questions (whenever option = NA), and all fill-in-the-blank questions
 vrs_sample_per_village_cleaned <- vrsTidy %>% 
@@ -235,7 +238,7 @@ vrs_sample_per_village_cleaned <- vrsTidy %>%
   mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no")) %>%
   filter(all_blank != "yes")
 
-write.csv(vrs_sample_per_village_cleaned, "Outputs/vrs_sample_per_village_cleaned.csv", row.names = FALSE)
+write.csv(vrs_sample_per_village_cleaned, file.path(outdir, "vrs_sample_per_village_cleaned.csv"), row.names = FALSE)
 
 
 vrs_sample_per_island <- vrsTidy %>% 
@@ -243,14 +246,14 @@ vrs_sample_per_island <- vrsTidy %>%
   summarise(n = n(), n_blank = sum(response == "")) %>%
   mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no"))
 
-write.csv(vrs_sample_per_island, "Outputs/vrs_sample_per_island.csv", row.names = FALSE)
+write.csv(vrs_sample_per_island, file.path(outdir, "vrs_sample_per_island.csv"), row.names = FALSE)
 
 vrs_sample_overall <- vrsTidy %>% 
   group_by(question) %>%
   summarise(n = n(), n_blank = sum(response == "")) %>%
   mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no"))
 
-write.csv(vrs_sample_overall, "Outputs/vrs_sample_overall.csv", row.names = FALSE)
+write.csv(vrs_sample_overall, file.path(outdir, "vrs_sample_overall.csv"), row.names = FALSE)
 
 # Output questions with zero answers for confirmation
 vrs_no_responses <- vrsTidy %>% 
@@ -259,7 +262,7 @@ vrs_no_responses <- vrsTidy %>%
   mutate(all_blank = if_else(n_blank == n, true = "yes", false = "no")) %>%
   filter(all_blank == "yes")
   
-write.csv(vrs_no_responses, "Outputs/vrs_no_responses.csv", row.names = FALSE)
+write.csv(vrs_no_responses, file.path(outdir, "vrs_no_responses.csv"), row.names = FALSE)
 
 
 
@@ -1541,7 +1544,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 #___________________________________________________________________________________________#
 # Clean market data
 #___________________________________________________________________________________________#
-market.files <- list.files("Data/HIES_raw_19May20/Market Survey")
+market.files <- list.files(file.path(datadir, "Market Survey"))
 
 # ID unique food items
 food.files <- unique(gsub("_.*", '', market.files))
@@ -1551,9 +1554,9 @@ food.items <- food.files
 food.items[food.items == "veges"] <- "vege" # make singular (have to keep plural to read in file)
 
 # Combine food and unit rosters
-food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+food.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[1], "roster.dta", sep ="_")))
-unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+unit.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[1], "unit", "roster.dta", sep ="_")))
 # Standardize column names
 colnames(food.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(food.roster))
@@ -1586,9 +1589,9 @@ colnames(marketSurvey) <- c("interview__key", "interview__id", "roster__id","oth
 
 
 for(i in 2:length(food.items)){
-  food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+  food.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[i], "roster.dta", sep ="_")))
-  unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+  unit.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[i], "unit", "roster.dta", sep ="_")))
   
   # Standardize column names
@@ -1625,7 +1628,7 @@ colnames(food.unit.roster) <- c("interview__key", "interview__id", "roster__id",
 }
 
 # Merge with survey location info
-survey.info <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", "MarketSurvey.dta"))
+survey.info <- read_dta(file.path(datadir, "Market Survey", "MarketSurvey.dta"))
 survey.info <- clean_data(survey.info)[[1]]
 
 survey.info <- survey.info %>%
@@ -1648,7 +1651,7 @@ write.csv(market_survey_sample_per_village, file.path(outdir, "market_survey_sam
 other_answers <- marketSurvey %>%
   filter(availability_other != "")
 
-write.csv(other_answers, "Outputs/marketSurvey_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "marketSurvey_other_answers.csv"), row.names = FALSE)
   
 
 # Plot food item availability
