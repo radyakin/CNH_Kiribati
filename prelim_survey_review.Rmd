@@ -50,9 +50,10 @@ library(ggplot2)
 #___________________________________________________________________________________________#
 # Read in dta files
 #___________________________________________________________________________________________#
-datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
-outdir <- file.path(getwd(), "Outputs")
-
+#datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
+#outdir <- file.path(getwd(), "Outputs")
+datadir <- "/Volumes/jgephart/Kiribati/HIES_raw_19May20"
+outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 source("R_scripts/cleaning_functions.R")
 source("R_scripts/plotting_functions.R")
 
@@ -82,7 +83,7 @@ var_labels <- var_labels %>%
 # Make tidy
 fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
-write.csv(fisheriesTidy, "Outputs/fisheriesTidy.csv", row.names = FALSE)
+write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
 ```
 
 
@@ -128,7 +129,7 @@ other_answers <- fisheriesTidy %>%
   filter(response != "") %>% 
   unique()
 
-write.csv(other_answers, "Outputs/fisheries_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "fisheries_other_answers.csv"), row.names = FALSE)
 
 
 
@@ -159,7 +160,7 @@ var_labels <- var_labels %>%
 # Make tidy
 fisheriesTidy_903 <- tidy_data(df = fisheries_903, pivot_col_1 = "p904", pivot_col_last = "p910", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
-write.csv(fisheriesTidy_903, "Outputs/fisheriesTidy_903.csv", row.names = FALSE)
+write.csv(fisheriesTidy_903, file.path(outdir, "fisheriesTidy_903.csv"), row.names = FALSE)
 
 
 # Output short answer responses for translation
@@ -172,7 +173,7 @@ other_answers <- fisheriesTidy_903 %>%
   unique() %>%
   arrange(question)
 
-write.csv(other_answers, "Outputs/fisheries_903R_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "fisheries_903R_other_answers.csv"), row.names = FALSE)
 
 
 # Filter out short answer responses before moving on to plotting data subsets
@@ -429,7 +430,7 @@ var_labels <- var_labels %>%
 # Make tidy
 fisheriesTidy_922 <- tidy_data(df = fisheries_922, pivot_col_1 = "p923", pivot_col_last = "p925", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
-write.csv(fisheriesTidy_922, "Outputs/fisheriesTidy_922.csv", row.names = FALSE)
+write.csv(fisheriesTidy_922, file.path(outdir, "fisheriesTidy_922.csv"), row.names = FALSE)
 
 
 event_subsets <- fisheriesTidy_922 %>%
@@ -779,7 +780,7 @@ var_labels <- var_labels %>%
 # Make tidy
 vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "vrs_island", pivot_col_last = "assignment__id", var_labels = var_labels, question_no = FALSE)
 
-write.csv(vrsTidy, "Outputs/vrsTidy.csv", row.names = FALSE)
+write.csv(vrsTidy, file.path(outdir, "vrsTidy.csv"), row.names = FALSE)
 
 
 #___________________________________________________________________________________________#
@@ -838,7 +839,7 @@ other_answers <- vrsTidy %>%
   filter(response != "") %>% 
   unique()
 
-write.csv(other_answers, "Outputs/vrs_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "vrs_other_answers.csv"), row.names = FALSE)
 
 
 
@@ -883,7 +884,7 @@ eventRosterTidy <- eventRosterTidy %>%
                               TRUE ~ response))
 
 
-write.csv(eventRosterTidy, "Outputs/eventRosterTidy.csv", row.names = FALSE)
+write.csv(eventRosterTidy, file.path(outdir, "eventRosterTidy.csv"), row.names = FALSE)
 
 event_subsets <- eventRosterTidy %>%
   select(event_roster__id) %>%
@@ -986,7 +987,7 @@ var_labels <- var_labels %>%
 # Make tidy
 fishassetRosterTidy <- tidy_data(df = fishassetRoster, pivot_col_1 = "num_assets", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
 
-write.csv(fishassetRosterTidy, "Outputs/fishassetRosterTidy.csv", row.names = FALSE)
+write.csv(fishassetRosterTidy, file.path(outdir, "fishassetRosterTidy.csv"), row.names = FALSE)
 
 event_subsets <- fishassetRosterTidy %>%
   select(fish_asset_roster__id) %>%
@@ -1333,7 +1334,7 @@ var_labels <- var_labels %>%
 # Make tidy
 outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "village_distance_out", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
 
-write.csv(outsideRosterTidy, "Outputs/outsideRosterTidy.csv", row.names = FALSE)
+write.csv(outsideRosterTidy, file.path(outdir, "outsideRosterTidy.csv"), row.names = FALSE)
 
 
 # List short answers here:
@@ -1346,7 +1347,7 @@ other_answers <- outsideRosterTidy %>%
   filter(response != "") %>% 
   unique()
 
-write.csv(other_answers, "Outputs/outsideRoster_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "outsideRoster_other_answers.csv"), row.names = FALSE)
 
 # Filter out short answer responses before moving on to plotting data subsets
 outsideRosterTidy <- outsideRosterTidy %>%
@@ -1626,7 +1627,7 @@ other_answers <- shareRosterTidy %>%
   filter(response != "") %>% 
   unique()
 
-write.csv(other_answers, "Outputs/shareRoster_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "shareRoster_other_answers.csv"), row.names = FALSE)
 
 # Filter out short answer responses before moving on to plotting data subsets
 shareRosterTidy <- shareRosterTidy %>%
@@ -1738,7 +1739,7 @@ var_labels <- var_labels %>%
 # Make tidy
 vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
 
-write.csv(vrsRosterTidy, "Outputs/vrsRosterTidy.csv", row.names = FALSE)
+write.csv(vrsRosterTidy, file.path(outdir, "vrsRosterTidy.csv"), row.names = FALSE)
 
 # Short answers - units need to be standardized and some responses need to be translated
 short_answers <- c("Other position of the respondent")
@@ -1749,7 +1750,7 @@ other_answers <- vrsRosterTidy %>%
   filter(response != "") %>% 
   unique()
 
-write.csv(other_answers, "Outputs/vrsRoster_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "vrsRoster_other_answers.csv"), row.names = FALSE)
 
 # Filter out short answer responses before moving on to plotting data subsets
 vrsRosterTidy <- vrsRosterTidy %>%
@@ -1824,7 +1825,7 @@ var_labels <- var_labels %>%
 # Make tidy
 withinRosterTidy <- tidy_data(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
 
-write.csv(withinRosterTidy, "Outputs/withinRosterTidy.csv", row.names = FALSE)
+write.csv(withinRosterTidy, file.path(outdir, "withinRosterTidy.csv"), row.names = FALSE)
 
 # Short answers - units need to be standardized and some responses need to be translated
 short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
@@ -1835,7 +1836,7 @@ other_answers <- withinRosterTidy %>%
   filter(response != "") %>% 
   unique()
 
-write.csv(other_answers, "Outputs/withinRoster_other_answers.csv", row.names = FALSE)
+write.csv(other_answers, file.path(outdir, "withinRoster_other_answers.csv"), row.names = FALSE)
 
 # Filter out short answer responses before moving on to plotting data subsets
 withinRosterTidy <- withinRosterTidy %>%
