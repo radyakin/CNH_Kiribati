@@ -1613,7 +1613,7 @@ shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "catch_receiver__1"
 
 
 
-write.csv(shareRosterTidy, "Outputs/shareRosterTidy.csv", row.names = FALSE)
+write.csv(shareRosterTidy, file.path(outdir, "shareRosterTidy.csv"), row.names = FALSE)
 
 
 
@@ -2042,7 +2042,7 @@ plot_single_response(plotDF_single, bin_n = 20)
 #___________________________________________________________________________________________#
 # Clean market data
 #___________________________________________________________________________________________#
-market.files <- list.files("Data/HIES_raw_19May20/Market Survey")
+market.files <- list.files(file.path(datadir, "Market Survey"))
 
 # ID unique food items
 food.files <- unique(gsub("_.*", '', market.files))
@@ -2052,9 +2052,9 @@ food.items <- food.files
 food.items[food.items == "veges"] <- "vege" # make singular (have to keep plural to read in file)
 
 # Combine food and unit rosters
-food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+food.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[1], "roster.dta", sep ="_")))
-unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+unit.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[1], "unit", "roster.dta", sep ="_")))
 
 # FIX IT - JG, not understanding what this was for:
@@ -2089,9 +2089,9 @@ colnames(marketSurvey) <- c("interview__key", "interview__id", "roster__id","oth
 
 
 for(i in 2:length(food.items)){
-  food.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+  food.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[i], "roster.dta", sep ="_")))
-  unit.roster <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", 
+  unit.roster <- read_dta(file.path(datadir, "Market Survey", 
                                     paste(food.files[i], "unit", "roster.dta", sep ="_")))
   
   # Standardize column names
@@ -2128,7 +2128,7 @@ colnames(food.unit.roster) <- c("interview__key", "interview__id", "roster__id",
 }
 
 # Merge with survey location info
-survey.info <- read_dta(file.path("Data", "HIES_raw_19May20", "Market Survey", "MarketSurvey.dta"))
+survey.info <- read_dta(file.path(datadir, "Market Survey", "MarketSurvey.dta"))
 survey.info <- clean_data(survey.info)[[1]]
 
 survey.info <- survey.info %>%
