@@ -44,16 +44,17 @@ library(magrittr)
 library(ggplot2)
 
 #___________________________________________________________________________________________#
-# Read in dta files
+# Read in tidy data files
 # ___________________________________________________________________________________________#
-# datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
-# outdir <- file.path(getwd(), "Outputs")
-datadir <- "/Volumes/jgephart/Kiribati/HIES_raw_19May20"
+datadir <- "/Volumes/jgephart/Kiribati/Outputs"
 outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 
 
 source("R_scripts/cleaning_functions.R")
 source("R_scripts/plotting_functions.R")
+
+vrsTidy <- read.csv(file.path(datadir, "vrsTidy.csv"))
+
 
 ```
 
@@ -147,27 +148,7 @@ write.csv(other_answers, file.path(outdir, "fisheries_other_answers.csv"), row.n
 
 ```{r, warning=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
 
-#___________________________________________________________________________________________#
-# Clean VRS data
-#___________________________________________________________________________________________#
-vrs <- read_dta(file.path(datadir, "VRS", "VRS.dta"))
-
-vrs <- clean_data(vrs)[[1]]
-
-# Extract variable label attributes
-var_labels <- clean_data(vrs)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names))
-
-# Make tidy
-vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "ms_island", pivot_col_last = "assignment__id", var_labels = var_labels, question_no = FALSE)
-
-write.csv(vrsTidy, file.path(outdir, "vrsTidy.csv"), row.names = FALSE)
-
-# Output question list
-write.csv(unique(vrsTidy$question), file.path(outdir, "vrs_question_list.csv"), row.names = FALSE)
+# FIX IT - Read in outputs from clean_vrs.R at the top
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -276,50 +257,6 @@ write.csv(vrs_no_responses, file.path(outdir, "vrs_no_responses.csv"), row.names
 
 
 ```{r, warning=FALSE}
-
-#___________________________________________________________________________________________#
-# Clean event roster 
-#___________________________________________________________________________________________#
-
-
-eventRoster <- read_dta(file.path(datadir, "VRS", "event_roster.dta"))
-
-eventRoster <- clean_data(eventRoster)[[1]]
-
-# Join back with vrsTidy to get island info
-vrs_islands <- vrsTidy %>%
-  select(interview__key, interview__id, vrs_island, vrs_village) %>%
-  unique()
-eventRoster<- eventRoster %>%
-  left_join(vrs_islands, by = c("interview__key", "interview__id"))
-
-# Extract variable label attributes
-var_labels <- clean_data(eventRoster)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names))
-
-# Make tidy
-eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
-
-# Output question list
-write.csv(unique(eventRosterTidy$question), "outputs/eventRoster_question_list.csv", row.names = FALSE)
-
-
-# Clean responses for "Time of occurrence of event" should be years
-eventRosterTidy <- eventRosterTidy %>%
-  mutate(response = case_when(response == "0" ~ "2000",
-                              response == "1" ~ "2001",
-                              response == "2" ~ "2002",
-                              response == "4" ~ "2004",
-                              response == "7" ~ "2007",
-                              response == "8" ~ "2008",
-                              response == "10" ~ "2010",
-                              TRUE ~ response))
-
-
-write.csv(eventRosterTidy, "Outputs/eventRosterTidy.csv", row.names = FALSE)
 
 event_subsets <- eventRosterTidy %>%
   select(event_roster__id) %>%
@@ -1541,118 +1478,7 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ## *Market survey*
 
 ```{r, warning=FALSE, message=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
-#___________________________________________________________________________________________#
-# Clean market data
-#___________________________________________________________________________________________#
-market.files <- list.files(file.path(datadir, "Market Survey"))
 
-# ID unique food items
-food.files <- unique(gsub("_.*", '', market.files))
-food.files <- food.files[food.files != "MarketSurvey.dta"]
-
-food.items <- food.files
-food.items[food.items == "veges"] <- "vege" # make singular (have to keep plural to read in file)
-
-# Combine food and unit rosters
-food.roster <- read_dta(file.path(datadir, "Market Survey", 
-                                    paste(food.files[1], "roster.dta", sep ="_")))
-unit.roster <- read_dta(file.path(datadir, "Market Survey", 
-                                    paste(food.files[1], "unit", "roster.dta", sep ="_")))
-# Standardize column names
-colnames(food.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(food.roster))
-colnames(unit.roster) <- gsub(paste(food.items[1], "s", sep = ""), paste(food.items[1]), colnames(unit.roster))
-
-# Merge by roster__id column (but not unit_roster__id column)
-marketSurvey <- full_join(food.roster, unit.roster, by = c("interview__key", "interview__id", paste(food.items[1], "roster__id", sep ="_")))
-
-# Clean and extract variable label attributes
-marketSurvey <- clean_data(marketSurvey)[[1]]
-
-
-# Remove y/n units columns and rename others
-select.cols <- c("interview__key", "interview__id", 
-                 paste(food.items[1], "roster__id", sep = "_"),
-                 paste("other", food.items[1], "units", sep = "_"),
-                 paste(food.items[1], "available", sep = "_"),
-                 paste(food.items[1], "avail_oth", sep = "_"),
-                 paste(food.items[1], "unit_roster__id", sep = "_"),
-                 paste(food.items[1], "price", sep = "_"),
-                 paste(food.items[1], "weight", sep = "_"),
-                 paste(food.items[1], "unit_oth", sep = "_")
-                 )
-marketSurvey <- marketSurvey %>% 
-  select_at(vars(select.cols))
-
-# Standardize column names
-colnames(marketSurvey) <- c("interview__key", "interview__id", "roster__id","other_units","availability","availability_other",
-                            "unit_roster__id","price","weight", "unit_other")
-
-
-for(i in 2:length(food.items)){
-  food.roster <- read_dta(file.path(datadir, "Market Survey", 
-                                    paste(food.files[i], "roster.dta", sep ="_")))
-  unit.roster <- read_dta(file.path(datadir, "Market Survey", 
-                                    paste(food.files[i], "unit", "roster.dta", sep ="_")))
-  
-  # Standardize column names
-  colnames(food.roster) <- gsub(paste(food.items[i], "s", sep = ""), paste(food.items[i]), colnames(food.roster))
-  colnames(unit.roster) <- gsub(paste(food.items[i], "s", sep = ""), paste(food.items[i]), colnames(unit.roster))
-
-  # Merge by roster__id column (but not unit_roster__id column)
-  food.unit.roster <- full_join(food.roster, unit.roster, by = c("interview__key", "interview__id", paste(food.items[i], "roster__id", sep ="_")))
-
-  # Clean and extract variable label attributes
-  food.unit.roster <- clean_data(food.unit.roster)[[1]]
-
-  
-  # Remove y/n units columns and rename others
-  select.cols <- c("interview__key", "interview__id", 
-                 paste(food.items[i], "roster__id", sep = "_"),
-                 paste("other", food.items[i], "units", sep = "_"),
-                 paste(food.items[i], "available", sep = "_"),
-                 paste(food.items[i], "avail_oth", sep = "_"),
-                 paste(food.items[i], "unit_roster__id", sep = "_"),
-                 paste(food.items[i], "price", sep = "_"),
-                 paste(food.items[i], "weight", sep = "_"),
-                 paste(food.items[i], "unit_oth", sep = "_")
-                 )
-  food.unit.roster <- food.unit.roster %>% 
-    select_at(vars(select.cols))
-
-# Standardize column names
-colnames(food.unit.roster) <- c("interview__key", "interview__id", "roster__id","other_units","availability","availability_other",
-                            "unit_roster__id","price","weight", "unit_other")
-  
-  # Join with marketSurvey to create join all foods
-  marketSurvey <- bind_rows(marketSurvey, food.unit.roster)
-}
-
-# Merge with survey location info
-survey.info <- read_dta(file.path(datadir, "Market Survey", "MarketSurvey.dta"))
-survey.info <- clean_data(survey.info)[[1]]
-
-survey.info <- survey.info %>%
-  select("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")
-
-marketSurvey <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
-
-write.csv(marketSurvey, file.path(outdir, "marketSurveyTidy.csv"), row.names=FALSE)
-
-
-# Output sample sizes:
-market_survey_sample_per_village <- marketSurvey %>% 
-  group_by(ms_island, ms_village) %>%
-  summarise(n_market = length(unique(ea_market)), n_foods = length(unique(roster__id)))
-
-write.csv(market_survey_sample_per_village, file.path(outdir, "market_survey_sample_per_village.csv"), row.names=FALSE)
-
-
-# Output short answer responses for translation
-other_answers <- marketSurvey %>%
-  filter(availability_other != "")
-
-write.csv(other_answers, file.path(outdir, "marketSurvey_other_answers.csv"), row.names = FALSE)
-  
 
 # Plot food item availability
 plot.food.availability(marketSurvey, incl_island = TRUE)

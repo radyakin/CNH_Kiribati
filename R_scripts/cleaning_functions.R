@@ -50,6 +50,7 @@ tidy_data <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no =
       mutate_all(as.character) %>% # mutate class to character to avoid warning message attributes are not identical across measure variables; they will be dropped
       pivot_longer(all_of(pivot_col_1):all_of(pivot_col_last), names_to = "question", values_to = "response") %>%
       filter(!is.na(response)) %>%
+      filter(response != "##N/A##") %>%
       left_join(var_labels, by = c("question" = "col.names")) %>%
       separate(col.labels, into = c("question", "option"), sep = ":") %>%
       mutate(question = str_trim(question)) %>%
