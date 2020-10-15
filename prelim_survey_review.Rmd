@@ -48,14 +48,14 @@ library(magrittr)
 library(ggplot2)
 
 #___________________________________________________________________________________________#
-# Read in dta files
+# Read in Tidy data files
 #___________________________________________________________________________________________#
-#datadir <- file.path(getwd(), "Data", "HIES_raw_19May20")
-#outdir <- file.path(getwd(), "Outputs")
-datadir <- "/Volumes/jgephart/Kiribati/HIES_raw_19May20"
+# Note: datadir and outdir are the same now that data cleaning is done separately in clean_vrs and clean_market.R 
+datadir <- "/Volumes/jgephart/Kiribati/Outputs"
 outdir <- "/Volumes/jgephart/Kiribati/Outputs"
-source("R_scripts/cleaning_functions.R")
 source("R_scripts/plotting_functions.R")
+
+vrsTidy <- read.csv(file.path(datadir, "vrsTidy.csv"))
 
 ```
 
@@ -104,10 +104,8 @@ plot_multi_response(plotDF_multiselect)
 
 ```
 
-
 ## Fisheries continued...
 ### *Single response questions*
-
 
 
 ```{r, fig.height = 8, results = 'asis'}
@@ -762,32 +760,10 @@ plot_single_response(plotDF_single, bin_n = 20)
 ### *Multi-response questions*
 
 ```{r, warning=FALSE, fig.height = 8, results = 'asis'}
-
-#___________________________________________________________________________________________#
-# Clean VRS data
-#___________________________________________________________________________________________#
-vrs <- read_dta(file.path(datadir, "VRS", "VRS.dta"))
-
-vrs <- clean_data(vrs)[[1]]
-
-# Extract variable label attributes
-var_labels <- clean_data(vrs)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names))
-
-# Make tidy
-vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "vrs_island", pivot_col_last = "assignment__id", var_labels = var_labels, question_no = FALSE)
-
-write.csv(vrsTidy, file.path(outdir, "vrsTidy.csv"), row.names = FALSE)
-
-
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
 # Bar graphs and Histograms of single/multi-select questions
-
 
 # Plot bar graph for each multi-select question
 plotDF_multiselect <- vrsTidy %>%
@@ -854,44 +830,11 @@ write.csv(other_answers, file.path(outdir, "vrs_other_answers.csv"), row.names =
 
 ```{r, warning=FALSE}
 
-#___________________________________________________________________________________________#
-# Clean event roster 
-#___________________________________________________________________________________________#
-eventRoster <- read_dta(file.path(datadir, "VRS", "event_roster.dta"))
-
-eventRoster <- clean_data(eventRoster)[[1]]
-
-# Extract variable label attributes
-var_labels <- clean_data(eventRoster)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names))
-
-# Make tidy
-eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
-
-
-# Clean responses for "Time of occurrence of event" should be years
-eventRosterTidy <- eventRosterTidy %>%
-  mutate(response = case_when(response == "0" ~ "2000",
-                              response == "1" ~ "2001",
-                              response == "2" ~ "2002",
-                              response == "4" ~ "2004",
-                              response == "7" ~ "2007",
-                              response == "8" ~ "2008",
-                              response == "10" ~ "2010",
-                              TRUE ~ response))
-
-
-write.csv(eventRosterTidy, file.path(outdir, "eventRosterTidy.csv"), row.names = FALSE)
-
 event_subsets <- eventRosterTidy %>%
   select(event_roster__id) %>%
   unique()
 
 event_subsets
-
 
 ```
 
