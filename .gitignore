@@ -4,3 +4,4 @@ Outputs/*
 *.Rproj
 *.pdf
 .Rhistory
+.RData

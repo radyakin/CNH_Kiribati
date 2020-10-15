@@ -42,6 +42,15 @@ write.csv(vrsTidy, file.path(outdir, "vrsTidy.csv"), row.names = FALSE)
 # Output question list
 write.csv(unique(vrsTidy$question), file.path(outdir, "vrs_question_list.csv"), row.names = FALSE)
 
+# List short-answer, fill-in response questions here:
+fill_in_questions <- vrsTidy %>%
+  filter(str_detect(question, pattern = "Other") & question != "Other meeting restrictions") %>% 
+  pull(question) %>% 
+  unique()
+
+# Additional fill-in response questions:
+fill_in_questions <- c(fill_in_questions, "Gender attending meeting", "New village rules")
+
 # Output short answer responses for translation
 other_answers <- vrsTidy %>% 
   filter(question %in% fill_in_questions) %>%
@@ -96,9 +105,6 @@ write.csv(vrs_no_responses, file.path(outdir, "vrs_no_responses.csv"), row.names
 #___________________________________________________________________________________________#
 # Clean event roster 
 #___________________________________________________________________________________________#
-
-## FIX IT - need Mike to output another version of vrs with interview key or interview id columns
-
 eventRoster <- read_dta(file.path(datadir, "20201013_VRS", "event_roster.dta"))
 
 eventRoster <- clean_data(eventRoster)[[1]]
@@ -149,6 +155,7 @@ fishassetRoster <- clean_data(fishassetRoster)[[1]]
 vrs_islands <- vrsTidy %>%
   select(interview__key, interview__id, vrs_island, vrs_village) %>%
   unique()
+
 fishassetRoster<- fishassetRoster %>%
   left_join(vrs_islands, by = c("interview__key", "interview__id"))
 
@@ -177,6 +184,7 @@ outsideRoster <- clean_data(outsideRoster)[[1]]
 vrs_islands <- vrsTidy %>%
   select(interview__key, interview__id, vrs_island, vrs_village) %>%
   unique()
+
 outsideRoster<- outsideRoster %>%
   left_join(vrs_islands, by = c("interview__key", "interview__id"))
 
@@ -209,10 +217,6 @@ other_answers <- outsideRosterTidy %>%
 
 write.csv(other_answers, file.path(outdir, "outsideRoster_other_answers.csv"), row.names = FALSE)
 
-#Filter out short answer responses before moving on to plotting data subsets
-outsideRosterTidy <- outsideRosterTidy %>%
-  filter(question %in% short_answers == FALSE)
-
 #___________________________________________________________________________________________#
 # Clean share roster
 #___________________________________________________________________________________________#
@@ -224,6 +228,7 @@ shareRoster <- clean_data(shareRoster)[[1]]
 vrs_islands <- vrsTidy %>%
   select(interview__key, interview__id, vrs_island, vrs_village) %>%
   unique()
+
 shareRoster<- shareRoster %>%
   left_join(vrs_islands, by = c("interview__key", "interview__id"))
 
@@ -267,6 +272,7 @@ vrsRoster <- clean_data(vrsRoster)[[1]]
 vrs_islands <- vrsTidy %>%
   select(interview__key, interview__id, vrs_island, vrs_village) %>%
   unique()
+
 vrsRoster<- vrsRoster %>%
   left_join(vrs_islands, by = c("interview__key", "interview__id"))
 
@@ -309,6 +315,7 @@ withinRoster <- clean_data(withinRoster)[[1]]
 vrs_islands <- vrsTidy %>%
   select(interview__key, interview__id, vrs_island, vrs_village) %>%
   unique()
+
 withinRoster<- withinRoster %>%
   left_join(vrs_islands, by = c("interview__key", "interview__id"))
 

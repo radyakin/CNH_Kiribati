@@ -20,7 +20,6 @@ source("R_scripts/cleaning_functions.R")
 #___________________________________________________________________________________________#
 market.files <- list.files(file.path(datadir, "20201013_Market_Survey")) 
 market.files <- market.files[grep(market.files, pattern = ".dta")]
-  
 
 # ID unique food items
 food.files <- unique(gsub("_.*", '', market.files))
@@ -73,7 +72,6 @@ for(i in 1:length(food.items)){
   marketSurvey <- bind_rows(marketSurvey, food.unit.roster)
 }
 
-## FIX IT - need Mike te re-output KIR_MARKET_SURVEY.dta with interview key and id
 # Merge with survey location info
 survey.info <- read_dta(file.path(datadir, "20201013_Market_Survey", "KIR_MARKET_SURVEY.dta"))
 survey.info <- clean_data(survey.info)[[1]]
@@ -81,115 +79,68 @@ survey.info <- clean_data(survey.info)[[1]]
 survey.info <- survey.info %>%
   select("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")
 
-marketSurvey <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
+# Already Tidy:
+marketSurveyTidy <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
 
-write.csv(marketSurvey, file.path(outdir, "marketSurveyTidy.csv"), row.names=FALSE)
+write.csv(marketSurveyTidy, file.path(outdir, "marketSurveyTidy.csv"), row.names=FALSE)
+
+#___________________________________________________________________________________________#
+# Other market survey outputs
+#___________________________________________________________________________________________#
 
 # Output sample sizes:
-market_survey_sample_per_village <- marketSurvey %>% 
+market_survey_sample_per_village <- marketSurveyTidy %>% 
   group_by(ms_island, ms_village) %>%
   summarise(n_market = length(unique(ea_market)), n_foods = length(unique(roster__id)))
 
 write.csv(market_survey_sample_per_village, file.path(outdir, "market_survey_sample_per_village.csv"), row.names=FALSE)
 
 # Output short answer responses for translation
-other_answers <- marketSurvey %>%
+other_answers <- marketSurveyTidy %>%
   filter(availability_other != "")
 
 write.csv(other_answers, file.path(outdir, "marketSurvey_other_answers.csv"), row.names = FALSE)
 
-#___________________________________________________________________________________________#
-# FIX IT - SHOULD PRICE DATA BE CLEANED BEFORE OUTPUTING marketSurveyTidy.csv?
-# i.e., - don't create separate data frame of market_survey_price, instead do all price cleaning within marketSurvey data frame above
-# Clean price data
-#___________________________________________________________________________________________#
-
-
-# Question for Mike: why are their duplicates in price information within marketSurvey?
-market_survey_price_duplicates <- marketSurvey %>% group_by(interview__id, roster__id, price, weight) %>% summarise(n=n()) %>% filter(n>1) %>% left_join(marketSurvey, by = c("interview__id", "roster__id", "price", "weight")) %>% ungroup() %>% select(-n) %>% arrange(interview__id)
+# Question for Mike: why are their duplicates in price information within marketSurveyTidy?
+market_survey_price_duplicates <- marketSurveyTidy %>% group_by(interview__id, roster__id, price, weight) %>% summarise(n=n()) %>% filter(n>1) %>% left_join(marketSurvey, by = c("interview__id", "roster__id", "price", "weight")) %>% ungroup() %>% select(-n) %>% arrange(interview__id)
 write.csv(market_survey_price_duplicates, file = file.path(outdir, "market_survey_price_duplicates.csv"), row.names = FALSE) # n = 68
 
-
 # FOODS WITH NO WEIGHT UNITS:
-market_survey_no_weight_unit <- marketSurvey %>%
+market_survey_no_weight_unit <- marketSurveyTidy %>%
   mutate(unit_roster__id = as.character(unit_roster__id)) %>%
   filter(unit_roster__id %in% c("Bundle / Bunch / Pack", "Each / Piece", "Can / Bottle", "Box / Carton", "Bag", "Other units", "Bucket", "Plate / Bowl", "Basket") & is.na(unit_other))
 write.csv(market_survey_no_weight_unit, file = file.path(outdir, "market_survey_no_weight_unit.csv"), row.names = FALSE) # n = 1
 
 # FOODS WITH NO WEIGHT MEASUREMENT (usually things that are measured with unit_roster__id == Each/Piece usually also has an entry for weight and unit_other, but these do not)
-market_survey_no_weight <- marketSurvey %>% 
-  filter(weight ==0)
+market_survey_no_weight <- marketSurveyTidy %>% 
+  filter(weight == 0)
 write.csv(market_survey_no_weight, file = file.path(outdir, "market_survey_no_weight.csv"), row.names = FALSE) # n = 17
 
-# STANDARDIZE PRICES
-market_survey_price <- marketSurvey %>% 
-  group_by(interview__id, roster__id, price, weight) %>% 
-  mutate(n=n()) %>% 
-  arrange(desc(n)) %>% 
-  filter(row_number()==1) %>% 
-  ungroup() %>% 
-  select(-n) %>%
-  arrange(interview__id) %>% 
-  # Where it exists, use unit_other to replace unit_roster__id, but first mutate to character
-  mutate(unit_roster__id = as.character(unit_roster__id),
-         unit_other = as.character(unit_other)) %>%
-  mutate(unit_roster__id = if_else(is.na(unit_other)==FALSE, true = unit_other, false = unit_roster__id)) %>%
-  # Filter out foods with no weight units (n=1):
-  filter(unit_roster__id != "Each / Piece") %>% 
-  # Filter out foods with no weight measurements (n=17)
-  filter(weight != 0) %>% 
-  # Standardize FORMAT of units: (g) Grams vs grams (g) 
-  mutate(unit_roster__id = case_when(unit_roster__id == "grams (g)" ~ "(g) Grams",
-                                     unit_roster__id == "Pounds (lb)" ~ "(lbs) Pounds",
-                                     unit_roster__id == "Kilograms (kg)" ~ "(kg) Kilograms",
-                                     unit_roster__id == "(kg) Kilo-grams" ~ "(kg) Kilograms",
-                                     TRUE ~ unit_roster__id)) %>%
-  # Standardize units (first, standardize WITHIN metric and within US units)
-  mutate(weight = if_else(unit_roster__id == "(kg) Kilograms", true = weight * 1000, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(kg) Kilograms", true = "(g) Grams", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(ml) Milliliters", true = weight / 1000, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(ml) Milliliters", true = "(ltr) Litres", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(lbs) Pounds", true = weight * 16, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(lbs) Pounds", true = "(oz) Ounces", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(c) Cups", true = weight / 16, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(c) Cups", true = "(gal) Gallons", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(pt) Pints", true = weight / 8, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(pt) Pints", true = "(gal) Gallons", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(qt) Quarts", true = weight / 4, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(qt) Quarts", true = "(gal) Gallons", false = unit_roster__id)) %>%
-  # Standardize all to metric (convert ounces to grams, gallons to liters)
-  mutate(weight = if_else(unit_roster__id == "(oz) Ounces", true = weight * 28.35, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(oz) Ounces", true = "(g) Grams", false = unit_roster__id)) %>%
-  mutate(weight = if_else(unit_roster__id == "(gal) Gallons", true = weight * 3.78, false = weight),
-         unit_roster__id = if_else(unit_roster__id == "(gal) Gallons", true = "(ltr) Litres", false = unit_roster__id)) %>%
-  # Now calculate PRICE per UNIT WEIGHT
-  mutate(standardized_price = price / weight)
-
 # FOODS with mixed units: note, can get this list by allowing print(food) to run in plot.food.prices function
-mixed_units <- c("Cordial, syrup, not further specified",
-                 "Cooking oil &amp; fats",
-                 "Canned meat, corned beef",
-                 "Chocolate in bars or in slabs",
-                 "Toffees, pastilles and other confectionery products",
-                 "Other non alcoholic beverages",
-                 "Noodles, pasta",
-                 "Other diary and oil product",
-                 "Brown coconut",
-                 "Chewing gum",
-                 "Ice block, icies, ice frubu etc",
-                 "Chinese sweets (mango skin, pawpaw skin etc",
-                 "Ice cream",
-                 "Bottled water/spring water/mineral water",
-                 "Cola flavour soft drink eg. Coca cola/Pepsi",
-                 "Soft drinks (Fizzy), eg. Sprite, 7 Up, Tonic, Fanta,",
-                 "Fruit juice (apple, pineapple, tropical etc...)",
-                 "Lollies",
-                 "Ice cream cones",
-                 "Other fruit (specify)"
-)
-
-market_survey_diff_units <- market_survey_price %>%
-  filter(roster__id %in% mixed_units) %>%
-  arrange(roster__id)
-
-write.csv(market_survey_diff_units, file = file.path(outdir, "market_survey_diff_units.csv"), row.names = FALSE)
+# mixed_units <- c("Cordial, syrup, not further specified",
+#                  "Cooking oil &amp; fats",
+#                  "Canned meat, corned beef",
+#                  "Chocolate in bars or in slabs",
+#                  "Toffees, pastilles and other confectionery products",
+#                  "Other non alcoholic beverages",
+#                  "Noodles, pasta",
+#                  "Other diary and oil product",
+#                  "Brown coconut",
+#                  "Chewing gum",
+#                  "Ice block, icies, ice frubu etc",
+#                  "Chinese sweets (mango skin, pawpaw skin etc",
+#                  "Ice cream",
+#                  "Bottled water/spring water/mineral water",
+#                  "Cola flavour soft drink eg. Coca cola/Pepsi",
+#                  "Soft drinks (Fizzy), eg. Sprite, 7 Up, Tonic, Fanta,",
+#                  "Fruit juice (apple, pineapple, tropical etc...)",
+#                  "Lollies",
+#                  "Ice cream cones",
+#                  "Other fruit (specify)"
+# )
+# 
+# market_survey_diff_units <- market_survey_price %>%
+#   filter(roster__id %in% mixed_units) %>%
+#   arrange(roster__id)
+# 
+# write.csv(market_survey_diff_units, file = file.path(outdir, "market_survey_diff_units.csv"), row.names = FALSE)
