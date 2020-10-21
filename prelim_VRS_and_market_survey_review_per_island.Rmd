@@ -1,40 +1,9 @@
 ---
 title: "Exploratory figures for CNHS"
 author: "Kelvin Gorospe and Jessica Gephart"
-date: "6/10/2020"
+date: "10/15/2020"
 output: pdf_document
 ---
-
-
-Notes for Mike:
-
-* Is it correct to remove the 0/1 columns in the market Survey data?
-* Is there a way to automate this process on your end? So that code still works with new data
-* Where is the market availability data that we had in the last iteration?
-* [name of product]_roster is the availability data
-* What is the meaning of NA in the multiselect variable columns?
-* "." and ".a" in STATA both mean missing. Refer to Mike's May 27 email for example (and to check for consistency with R)
-* Why does VRS have household info and anemia info?
-* Why are these output as different files (vrs, market, etc. each broken into multiple separate files)
-* It is easiest to have the fewest number possible
-* Are they going to translate the HIES iKiribati responses?
-* Variable labels are cut off (how do we get the full answers back?) see: var_labels
-* How to standardize units when none is given (e.g., question == Travel time outside boundary in outsideRoster dataset includes "12", "3", "30 minutes", "1 hour", etc)
-* Is a response of "zero" the same as blank response? 
-* What's the difference between interview__key and interview__id? Currently using both to join eventRoster, fishRoster, etc with vrs data to get island information
-
-Suggested path forward:
- 
-1. Write out tidy versions of each data set and share csv
-2. Write functions to visualize each question type:
-     - Multi- and single-select, produce bar chart
-     - Integer, produce bar chart
-     - Continuous, produce histogram and (TBD: box and whisker)
-     - Free response, compile unique answers with unique IDs for translation, question, island, possibly role
-3. Loop through data and produce pdf of all plots
-4. TBD: Start to creat summaries by village/island
- 
-
 
 ```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -52,102 +21,22 @@ outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 
 source("R_scripts/plotting_functions.R")
 
+# VRS Data:
 vrsTidy <- read.csv(file.path(datadir, "vrsTidy.csv"))
 eventRosterTidy <- read.csv(file.path(datadir, "eventRosterTidy.csv"))
 fishassetRosterTidy <- read.csv(file.path(datadir, "fishassetRosterTidy.csv"))
 outsideRosterTidy <- read.csv(file.path(datadir, "outsideRosterTidy.csv"))
+shareRosterTidy <- read.csv(file.path(datadir, "shareRosterTidy.csv"))
 vrsRosterTidy <- read.csv(file.path(datadir, "vrsRosterTidy.csv"))
 withinRosterTidy <- read.csv(file.path(datadir, "withinRosterTidy.csv"))
 
-```
-
-## Fisheries data
-### *Note: no island information in current dataset
-
-
-```{r, warning = FALSE}
-
-# FIX IT - if island information becomes available for fisheries data, will also need to incorporate p903r and p922.dta files (in Fisheries data folder): just copy code from prelim_survey_review.Rmd
-
-#___________________________________________________________________________________________#
-# Clean fisheries data
-#___________________________________________________________________________________________#
-fisheries <- read_dta(file.path(datadir, "Fisheries", "Fisheries.dta"))
-
-fisheries <- clean_data(fisheries)[[1]]
-
-# Extract variable label attributes
-var_labels <- clean_data(fisheries)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names))
-
-# Make tidy
-fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
-
-write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
-
-# Output QUESTION list:
-write.csv(unique(fisheriesTidy$question), file.path(outdir, "fisheries_question_list.csv"), row.names = FALSE)
-
-```
-
-
-
-```{r, fig.height = 8, fig.width = 8, results = 'asis'}
-#___________________________________________________________________________________________#
-# Visualize fisheries data
-#___________________________________________________________________________________________#
-# Bar graphs and Histograms of single/multi-select questions
-
-
-# Plot bar graph for each multi-select question
-plotDF_multiselect <- fisheriesTidy %>%
-  filter(!is.na(option)) %>%
-  filter(response == "1")
-
-plot_multi_response(plotDF_multiselect)
-
-```
-
-
-## Fisheries continued...
-### *Single response questions*
-
-
-
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
-# List short-answer, fill-in response questions here:
-fill_in_questions <- c("p903n", "p921n", "p922n1", "p922n2")
-
-# Plot histogram for each single response question while removing zeroes
-plotDF_single <- fisheriesTidy %>%
-  filter(is.na(option)) %>%
-  filter(question.no %in% fill_in_questions == FALSE) # remove "other" responses
-
-plot_single_response(plotDF_single, bin_n = 20)
-  
-
-# Output short answer responses for translation
-other_answers <- fisheriesTidy %>% 
-  filter(question.no %in% fill_in_questions) %>%
-  filter(response != "") %>% 
-  unique() %>%
-  arrange(question)
-
-write.csv(other_answers, file.path(outdir, "fisheries_other_answers.csv"), row.names = FALSE)
-
-
-
+# Market Data:
+marketSurveyTidy <- read.csv(file.path(datadir, "marketSurveyTidy.csv"))
 
 ```
 
 ## VRS Data
 ### *Multi-response questions*
-
-
 
 ```{r, warning=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
 #___________________________________________________________________________________________#
@@ -166,7 +55,6 @@ plot_multi_response(plotDF_multiselect, incl_island = TRUE)
 
 ## VRS continued...
 ### *Single response questions*
-
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
 # Plot histogram for each single response question while removing zeroes
@@ -190,13 +78,9 @@ plotDF_single <- vrsTidy %>%
 
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
 
-
 ## Event Roster Data: List of events
-
-
 
 ```{r, warning=FALSE}
 
@@ -205,7 +89,6 @@ event_subsets <- eventRosterTidy %>%
   unique()
 
 event_subsets
-
 
 ```
 
@@ -226,7 +109,6 @@ plot_single_response(plotDF_single, bin_n = 20,incl_island = TRUE)
 
 ```
 
-
 ## *Event: Cyclone*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -243,7 +125,6 @@ plotDF_single <- eventRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
 
 ## *Event: Harmful algal bloom*
 
@@ -322,9 +203,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
-
 ## *Asset: Fishing Nets (gillnet)*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -359,9 +237,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
-
 ## *Asset: Fishing Lines*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -378,9 +253,6 @@ plotDF_single <- fishassetRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ```
 
-
-
-
 ## *Asset: Active Fish Traps*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -395,10 +267,6 @@ plotDF_single <- fishassetRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ```
-
-
-
-
 
 ## *Asset: Underwater flashlights*
 
@@ -415,7 +283,6 @@ plotDF_single <- fishassetRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ```
-
 
 ## *Asset: Wood canoes*
 
@@ -434,7 +301,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
 ## *Asset: Eskies/portable coolers*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -451,9 +317,6 @@ plotDF_single <- fishassetRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
-
 
 ## *Asset: SCUBA diving equipment*
 
@@ -472,8 +335,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
 ## *Asset: Freezers (electric or propane)*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -491,9 +352,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
-
 ## *Asset: Ice machines*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -510,9 +368,6 @@ plotDF_single <- fishassetRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
-
 
 ## *Asset: Fishing Nets (purse)*
 
@@ -548,8 +403,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
 ## *Asset: Harpoons/Spears*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -566,7 +419,6 @@ plotDF_single <- fishassetRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
 
 ## *Asset: FAD (Fish Aggregating Device)*
 
@@ -585,7 +437,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
 ## *Asset: Other Fishing Equipment (note)*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -601,14 +452,16 @@ plotDF_single <- fishassetRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
-
-
 ```
 
 ## Outside Roster Data: List of outside assets
 
 ```{r, warning=FALSE}
+
+#Filter out short answer responses before moving on to plotting data subsets
+short_answers <- c("Other transport mode outside boundary", "Travel time outside boundary")
+outsideRosterTidy <- outsideRosterTidy %>%
+  filter(question %in% short_answers == FALSE)
 
 event_subsets <- outsideRosterTidy %>%
   select(outside_roster__id) %>%
@@ -630,13 +483,10 @@ event_subsets
 plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Clinic/Hospital")
 
-
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
 
 ## *Asset: Bank*
 
@@ -655,9 +505,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
-
 ## *Asset:  Nearest Market*
 
 ```{r}
@@ -675,8 +522,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
 ## *Asset:  Nearest Post Office*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -692,11 +537,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
-
-
 
 ## *Asset: Nearest Credit Facility*
 
@@ -713,9 +554,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
 
 ## *Asset: Nearest Police Station*
 
@@ -732,13 +571,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
-
-
-
-
 
 ## *Asset: Nearest Court House*
 
@@ -755,9 +588,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
 
 ## *Asset: Airport*
 
@@ -774,11 +605,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
-
-
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
@@ -795,11 +622,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
-
-
 
 ## *Asset: Nearest fish landing site*
 
@@ -816,12 +639,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
-
-
-
 
 ## *Asset: Nearest Church*
 
@@ -838,9 +656,7 @@ plotDF_single <- outsideRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
 
 ## Share Roster Data: List of events
 
@@ -856,9 +672,6 @@ event_subsets <- shareRosterTidy %>%
 
 event_subsets
 ```
-
-
-
 
 ## *Asset: Finfish*
 
@@ -924,18 +737,12 @@ plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
 vrsRosterTidy <- vrsRosterTidy %>%
   filter(question %in% short_answers == FALSE)
 
-
 event_subsets <- vrsRosterTidy %>%
   select(vrs_roster__id) %>%
   unique()
 
 event_subsets
 ```
-
-
-
-
-
 
 ## *VRS Roster: 1*
 
@@ -952,22 +759,18 @@ plotDF_single <- vrsRosterTidy %>%
 # Plot histogram
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
-
 ```
-
 
 ## *VRS Roster: 2*
 ### Note: only contains one individual
 
 ```{r}
-
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
 # Note: VRS Roster 2 only contains one individual with the following characteristics
 
 #vrsRosterTidy %>% filter(vrs_roster__id==2)
-
 
 ```
 
@@ -976,6 +779,8 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 ```{r, warning = FALSE}
 
 # Filter out short answer responses before moving on to plotting data subsets
+short_answers <- c("Other transport mode within boundary", "Travel time within boundary")
+
 withinRosterTidy <- withinRosterTidy %>%
   filter(question %in% short_answers == FALSE)
 
@@ -986,10 +791,6 @@ event_subsets <- withinRosterTidy %>%
 event_subsets
 
 ```
-
-
-
-
 
 ## *Asset: Nearest Church*
 
@@ -1007,7 +808,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
 ## *Asset: Nearest Trade Store/Supermarket*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -1023,8 +823,6 @@ plotDF_single <- withinRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
 
 ## *Asset: Airport*
 
@@ -1042,9 +840,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
-
 ## *Asset: Clinic/Hospital*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -1060,9 +855,6 @@ plotDF_single <- withinRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
-
 
 ## *Asset: Nearest fish landing site*
 
@@ -1080,9 +872,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-
-
 ## *Asset: Nearest Credit Facility*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -1098,8 +887,6 @@ plotDF_single <- withinRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
 
 ## *Asset: Nearest Market*
 
@@ -1117,7 +904,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
 ## *Asset: Nearest Post Office*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -1133,8 +919,6 @@ plotDF_single <- withinRosterTidy %>%
 plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
-
-
 
 ## *Asset: Nearest Court House*
 
@@ -1152,7 +936,6 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
 ## *Asset: Bank*
 
 ```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
@@ -1169,22 +952,65 @@ plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
 
 ```
 
-
-## *Market survey*
+### *Market survey*
+## Food availability
 
 ```{r, warning=FALSE, message=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
 
 # Plot food item availability
-plot.food.availability(marketSurvey, incl_island = TRUE)
+plot.food.availability(marketSurveyTidy, incl_island = TRUE)
 
 ```
-
 
 ### Market survey continued... 
 ## Food prices
 
 ```{r, warning = FALSE, message = FALSE, fig.height = 8, results = 'asis'}
 
-# Plot prices:
+# STANDARDIZE PRICES before plotting
+market_survey_price <- marketSurveyTidy %>% 
+  group_by(interview__id, roster__id, price, weight) %>% 
+  mutate(n=n()) %>% 
+  #arrange(desc(n)) %>% 
+  filter(row_number()==1) %>% # just keep one entry per group
+  ungroup() %>% 
+  select(-n) %>%
+  arrange(interview__id) %>% 
+  # Where it exists, use unit_other to replace unit_roster__id, but first mutate to character
+  mutate(unit_roster__id = as.character(unit_roster__id),
+         unit_other = as.character(unit_other)) %>%
+  mutate(unit_roster__id = if_else(is.na(unit_other)==FALSE, true = unit_other, false = unit_roster__id)) %>%
+  # Filter out foods with no weight units (n=1):
+  filter(unit_roster__id != "Each / Piece") %>% 
+  # Filter out foods with no weight measurements (n=17)
+  filter(weight != 0) %>% 
+  # Standardize FORMAT of units: (g) Grams vs grams (g) 
+  mutate(unit_roster__id = case_when(unit_roster__id == "grams (g)" ~ "(g) Grams",
+                                     unit_roster__id == "Pounds (lb)" ~ "(lbs) Pounds",
+                                     unit_roster__id == "Kilograms (kg)" ~ "(kg) Kilograms",
+                                     unit_roster__id == "(kg) Kilo-grams" ~ "(kg) Kilograms",
+                                     TRUE ~ unit_roster__id)) %>%
+  # Standardize units (first, standardize WITHIN metric and within US units)
+  mutate(weight = if_else(unit_roster__id == "(kg) Kilograms", true = weight * 1000, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(kg) Kilograms", true = "(g) Grams", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(ml) Milliliters", true = weight / 1000, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(ml) Milliliters", true = "(ltr) Litres", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(lbs) Pounds", true = weight * 16, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(lbs) Pounds", true = "(oz) Ounces", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(c) Cups", true = weight / 16, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(c) Cups", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(pt) Pints", true = weight / 8, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(pt) Pints", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(qt) Quarts", true = weight / 4, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(qt) Quarts", true = "(gal) Gallons", false = unit_roster__id)) %>%
+  # Standardize all to metric (convert ounces to grams, gallons to liters)
+  mutate(weight = if_else(unit_roster__id == "(oz) Ounces", true = weight * 28.35, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(oz) Ounces", true = "(g) Grams", false = unit_roster__id)) %>%
+  mutate(weight = if_else(unit_roster__id == "(gal) Gallons", true = weight * 3.78, false = weight),
+         unit_roster__id = if_else(unit_roster__id == "(gal) Gallons", true = "(ltr) Litres", false = unit_roster__id)) %>%
+  # Now calculate PRICE per UNIT WEIGHT
+  mutate(standardized_price = price / weight)
 
+# Plot prices:
 plot.food.prices(market_survey_price, incl_island = TRUE)
+```
