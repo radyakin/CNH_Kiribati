@@ -1,14 +1,17 @@
 README
 
+GUIDELINES FOR THE GROUP:
+* At the top of each of the R scripts that you're writing, include: a descriptive title (what does this code do?) and your name
+* All cleaned and raw Kiribati data will be in the group's Google drive (we won't be using GitHub as a data repository)
+* All cleaning scripts should go in the folder "Data_cleaning""
+* As you begin to work on your own data analyses and visualizations, create a separate folder for each project within the folder "Scripts_per_project"
+
+
 Questions for Mike from October 2020:
-
-1. Latest vrs from sharepoint version 0 ("KIR_VILLAGE_RESOURCE_SURVEY.dta") does not have interview__id or interview__key - i.e., no common columns to join with event_roster.dta
-
-2. Same problem as 1 for KIR_MARKET_SURVEY.dta
-
+* Latest vrs from sharepoint version 0 ("KIR_VILLAGE_RESOURCE_SURVEY.dta") does not have interview__id or interview__key - i.e., no common columns to join with event_roster.dta
+* Same problem as 1 for KIR_MARKET_SURVEY.dta
 
 Questions for Mike from June 2020:
-
 * Is it correct to remove the 0/1 columns in the market Survey data?
 * Is there a way to automate this process on your end? So that code still works with new data
 * Where is the market availability data that we had in the last iteration?
