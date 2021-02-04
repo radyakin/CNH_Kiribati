@@ -6,6 +6,8 @@ library(sf)
 library(ggsn) # for adding north arrows and scale bar
 datadir <- "Data for mapping"
 outdir <- "Outputs"
+
+# Load country polygons
 kir_sf <- readRDS(file = file.path(datadir, "gadm36_KIR_0_sf.rds"))
 st_geometry(kir_sf)
 # Geographic CRS (coordinate reference system) WGS 84 - World Geodetic System - this is the system used by GPS
@@ -14,11 +16,16 @@ st_geometry(kir_sf)
 # Resolution is only at the country level (i.e., no attribute to allow for easy subsetting by island name)
 plot(st_geometry(kir_sf))
 
+# Load village and reef info from table 1
+village_info <- read.csv(file = file.path(datadir, "data_from_table_1.csv")) %>%
+  select(-c(Lat, Lon)) # Original Table 1 lat/longs were incorrect; get this info from Jacob's table instead
+
 # Looks like rnaturalearth package also doesn't have island-level info for Kiribati either
 # library(rnaturalearth)
 # kir_ne <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = "Kiribati")
 
-# Use Jacob's site info to get bounding box for each island and use this to subset each island
+# Load Jacob's ecological sites info and join with village_info
+# Also Use Jacob's ecological site info to get bounding box for each island and use this to subset each island
 site_info <- read.csv(file = file.path(datadir, "Kiribaiti NSF Coordinates FINAL Eurich - all data.csv")) %>%
   filter(Island != "") %>% # Remove blank rows
   filter(Description %in% c("Ciguatera", "Miscellaneous")==FALSE) %>% # remove misc and ciguatera sites
@@ -27,7 +34,8 @@ site_info <- read.csv(file = file.path(datadir, "Kiribaiti NSF Coordinates FINAL
                            Notes == "MT" ~ "Manta Tow",
                            Notes == "SB" ~ "Backreef", 
                            Notes == "SIQ" ~ "Soft-bottom backreef",
-                           TRUE ~ Notes)) 
+                           TRUE ~ Notes)) %>%
+  left_join(village_info, by = c("Name_cleaned" = "Community.Name", "Island" = "Island.Name"))
 
 islands <- sort(unique(site_info$Island))
 
@@ -74,10 +82,10 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "Tabuaeran" ~ 0.5,
                                TRUE ~ 0))
   
-  
+# FIX IT - loop not working for full set of islands
 for (i in 1:length(islands)){
   island_i <- islands[i]
-  bounds <- site_info %>%
+  island_bounds <- site_info %>%
     filter(Island == island_i) %>%
     dplyr::select(Lat, Long) %>% 
     summarise(max_lat = max(Lat),
@@ -86,10 +94,16 @@ for (i in 1:length(islands)){
               min_long = min(Long))
   island_buffer_i <- island_buffer %>%
     filter(island == island_i)
-  box = c(xmin = bounds$min_long + island_buffer_i$xmin_buff, 
-          xmax = bounds$max_long + island_buffer_i$xmax_buff,
-          ymin = bounds$min_lat + island_buffer_i$ymin_buff, 
-          ymax = bounds$max_lat + island_buffer_i$ymax_buff)
+  island_box = c(xmin = island_bounds$min_long + island_buffer_i$xmin_buff, 
+          xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
+          ymin = island_bounds$min_lat + island_buffer_i$ymin_buff, 
+          ymax = island_bounds$max_lat + island_buffer_i$ymax_buff)
+  # Use box to crop island out of kir_sf
+  #island_crop <- st_crop(st_geometry(kir_sf), box)
+  island_crop <- st_crop(kir_sf, island_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
+  
+  
+  # Subset ecological site info:
   island_dat <- site_info %>%
     filter(Island == island_i) 
   dive_sites <- island_dat %>%
@@ -103,25 +117,31 @@ for (i in 1:length(islands)){
     filter(Description == "Site") %>%
     filter(Notes == "Manta Tow") %>%
     select(Lat, Long, Name_cleaned, Notes) %>%
-    mutate(Manta_pair = str_replace(Name_cleaned, pattern = "a|b", replacement = ""))
+    mutate(Manta_pair = str_replace(Name_cleaned, pattern = "a|b", replacement = "")) 
+  
+  # Subset village info
   villages <- island_dat %>%
     filter(Description == "Village") %>%
-    select(Lat, Long, Name_cleaned, Description, Notes)
+    select(Lat, Long, Name_cleaned, Rank.Market.Integration)
+  
 
-  # Use box to crop island out of kir_sf
-  #island_crop <- st_crop(st_geometry(kir_sf), box)
-  island_crop <- st_crop(kir_sf, box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
   p <- ggplot() +
     geom_sf(data = island_crop) +
-    # Plot villages
-    geom_point(data = villages, aes(x = Long, y = Lat, shape = Description), size = 2) +
-    scale_shape_manual(values = 17) +
+    # VILLAGE and REEF INFO (from Table 1)
+    geom_point(data = villages, aes(x = Long, y = Lat, color = Rank.Market.Integration), shape = 17, size = 3) +
     #geom_label(data = villages, aes(x = Long, y = Lat, label = Name_cleaned), fontface = "italic", nudge_y = 0.008) +
-    # Plot manta tows
-    geom_line(data = manta_tows, aes(x = Long, y = Lat, group = Manta_pair, linetype = Notes), color = "blue", size = 1) +
-    # Plot dive sites with geom_point
-    geom_point(data = dive_sites, aes(x = Long, y = Lat, color = Notes)) +
-    # Plot dive sites with geom_sf
+    # MANTA TOWS
+    # For track lines:
+    #geom_line(data = manta_tows, aes(x = Long, y = Lat, group = Manta_pair, linetype = Notes), color = "blue", size = 1) +
+    # For midpoint of track line:
+    geom_point(data = manta_tows %>%
+                 group_by(Manta_pair) %>%
+                 summarise(avg_lat = mean(Lat),
+                           avg_long = mean(Long)), aes(x = avg_long, y = avg_lat), color = "black") +
+    # Plot dive sites COLLAPSE all sampling strata - label as "eco sites"
+    # with geom_point
+    geom_point(data = dive_sites, aes(x = Long, y = Lat), color = "black") +
+    # with geom_sf
     # geom_sf(data = dive_sites, aes(color = Notes)) +
     theme_bw() +
     # Add scale bar and north arrow
@@ -155,21 +175,75 @@ gilbert_islands <- c("Abaiang", "Abemama", "Butaritari", "N Tabiteuea", "N Taraw
 line_islands <- c("Kiritimati", "Tabuaeran")
 
 # First Gilbert:
-bounds <- site_info %>%
+archipel_bounds <- site_info %>%
   filter(Island %in% gilbert_islands) %>%
   dplyr::select(Lat, Long) %>%
   summarise(max_lat = max(Lat),
             min_lat = min(Lat),
             max_long = max(Long),
             min_long = min(Long))
-box = c(xmin = bounds$min_long + 0, 
-        xmax = bounds$max_long + 0,
-        ymin = bounds$min_lat + 0, 
-        ymax = bounds$max_lat + 0)
+archipel_box = c(xmin = archipel_bounds$min_long + 0, 
+        xmax = archipel_bounds$max_long + 0,
+        ymin = archipel_bounds$min_lat + 0, 
+        ymax = archipel_bounds$max_lat + 0)
 
-# Use box to crop island out of kir_sf
-gilbert_crop <- st_crop(kir_sf, box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
+# Use box to crop gilbert out of full country map
+gilbert_crop <- st_crop(kir_sf, archipel_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
+gilbert_buffer <- st_buffer(gilbert_crop, dist = 0.1, joinStyle = "ROUND")
+# Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
+# Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
+
+# Add ISLAND NAMES TO POLYGONS
+# Split MULTIPOLYGON into separate POLYGONS
+gilbert_buffer_split <- gilbert_buffer %>% # initiate dataframe for loop
+  st_cast("POLYGON") %>%
+  mutate(island_name = "Not sampled")
+
+# Loop through each island, create bounding box from site info, and match polygons in gilbert buffer by testing if polygons intersect
+for (i in 1:length(islands)){
+  island_i <- islands[i]
+  island_bounds <- site_info %>%
+    filter(Island == island_i) %>%
+    dplyr::select(Lat, Long) %>% 
+    summarise(max_lat = max(Lat),
+              min_lat = min(Lat),
+              max_long = max(Long),
+              min_long = min(Long))
+  island_buffer_i <- island_buffer %>%
+    filter(island == island_i)
+  
+  island_polygon = data.frame(xmin = island_bounds$min_long + island_buffer_i$xmin_buff, 
+                              xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
+                              ymin = island_bounds$min_lat + island_buffer_i$ymin_buff, 
+                              ymax = island_bounds$max_lat + island_buffer_i$ymax_buff) %>%
+    # Turn xmin/max and ymin/max into four coordinates
+    pivot_longer(cols = all_of(c("xmin", "xmax")), names_to = "x", values_to = "lon") %>%
+    pivot_longer(cols = all_of(c("ymin", "ymax")), names_to = "y", values_to = "lat") %>%
+    st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = F) %>%
+    # Combine coordinates and cast to polygon
+    st_combine() %>%
+    st_cast("POLYGON")
+  
+  # test if any of the polygons intersect with island_polygon - if so, assign name island_i
+  # loop through all island_i and island_polygons
+  gilbert_buffer_split <- gilbert_buffer_split %>%
+    mutate(island_test = st_intersects(geometry, island_polygon, sparse = FALSE)) %>%
+    mutate(island_name = case_when(island_name != "Not sampled" ~ island_name,
+                                   island_test == TRUE ~ island_i,
+                                   TRUE ~ "Not sampled")) %>%
+    select(-island_test) 
+}
+# Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
+# Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
+
+# LEFT OFF HERE:
+# NEXT: Split Tabiteuae and Tarawa polygons into NORTH and SOUTH
+# Apparently Abaiang and Tarawa are a single polygon? loop matches to Abaiang, but doesn't match Tarawa since this is part of Abaiang in the data frame
+
+
+# FIX IT: Add color-coding to buffer zones by reef health
 p <- ggplot() +
+  geom_sf(data = gilbert_buffer) +
   geom_sf(data = gilbert_crop) +
   theme_bw() +
   # Add scale bar and north arrow
