@@ -1,6 +1,7 @@
 # PLOT MAP FOR CNHS STUDY PROTOCOL
 
 # First download sf file for Kiribati from https://gadm.org/download_country_v3.html
+rm(list=ls())
 library(tidyverse)
 library(sf)
 library(ggsn) # for adding north arrows and scale bar
@@ -31,18 +32,13 @@ village_info <- read.csv(file = file.path(datadir, "data_from_table_1.csv")) %>%
 eco_info <- read.csv(file = file.path(datadir, "Kiribaiti NSF Coordinates FINAL Eurich - all data.csv")) %>%
   mutate(Island = if_else(str_detect(Island, "Tabiteuae"), true = str_replace(Island, "Tabiteuae", replacement = "Tabiteuea"), false = Island))
 
-# Check village names
+# Check village names match between datasets
 setdiff(eco_info %>% filter(Description == "Village") %>% pull(Name_cleaned), village_info$Community.Name)
 setdiff(village_info$Community.Name, eco_info %>% filter(Description == "Village") %>% pull(Name_cleaned))
-
-# Check Buariki village in eco_info
 
 # Check island names
 setdiff(eco_info %>%  pull(Island), village_info$Island.Name)
 setdiff(village_info$Island.Name, eco_info %>%  pull(Island))
-
-eco_info %>% pull(Island)
-
 
 site_info <- eco_info %>%
   filter(Island != "") %>% # Remove blank rows
@@ -59,13 +55,13 @@ islands <- sort(unique(site_info$Island))
 
 # Create custom buffer for each island - based on trial error of default "0" for buffer
 island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
-  mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.02,
+  mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.3,
                                island == "Abemama" ~ 0,
                                island == "Butaritari" ~ 0,
                                island == "Kiritimati" ~ -0.5, 
-                               island == "N Tabiteuae" ~ 0,
+                               island == "N Tabiteuea" ~ 0,
                                island == "Onotoa" ~ -0.02,
-                               island == "S Tabiteuae" ~ 0,
+                               island == "S Tabiteuea" ~ 0,
                                island == "S Tarawa" ~ 0,
                                island == "Tabuaeran" ~ 0,
                                TRUE ~ 0)) %>%
@@ -73,9 +69,9 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "Abemama" ~ 0.02,
                                island == "Butaritari" ~ 0,
                                island == "Kiritimati" ~ 0.5, 
-                               island == "N Tabiteuae" ~ 0.02,
+                               island == "N Tabiteuea" ~ 0.02,
                                island == "Onotoa" ~ 0.02,
-                               island == "S Tabiteuae" ~ 0.02,
+                               island == "S Tabiteuea" ~ 0.02,
                                island == "S Tarawa" ~ 0.05,
                                island == "Tabuaeran" ~ 0.5,
                                TRUE ~ 0)) %>%
@@ -83,9 +79,9 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "Abemama" ~ -0.5,
                                island == "Butaritari" ~ 0,
                                island == "Kiritimati" ~ -0.5, 
-                               island == "N Tabiteuae" ~ -0.5,
+                               island == "N Tabiteuea" ~ -0.5,
                                island == "Onotoa" ~ -0.02,
-                               island == "S Tabiteuae" ~ -0.1,
+                               island == "S Tabiteuea" ~ -0.1,
                                island == "S Tarawa" ~ 0,
                                island == "Tabuaeran" ~ -0.5,
                                TRUE ~ 0)) %>%
@@ -93,9 +89,9 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "Abemama" ~ 0.02,
                                island == "Butaritari" ~ 0,
                                island == "Kiritimati" ~ 0.5, 
-                               island == "N Tabiteuae" ~ 0.05,
+                               island == "N Tabiteuea" ~ 0.15,
                                island == "Onotoa" ~ 0.02,
-                               island == "S Tabiteuae" ~ 0.02,
+                               island == "S Tabiteuea" ~ 0.02,
                                island == "S Tarawa" ~ 0,
                                island == "Tabuaeran" ~ 0.5,
                                TRUE ~ 0))
@@ -164,11 +160,12 @@ for (i in 1:length(islands)){
     theme_bw() +
     # Add scale bar and north arrow
     scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84") +
-    # For S Tabiteuae, change scalebar:
+    # Custom scalebar for S Tabiteuae, change scalebar:
     #scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "topright", st.size = 3, model = "WGS84") +
-    # For S Tarawa, change scalebar:
+    # Custom scalebar for S Tarawa, change scalebar:
     #scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomright", st.size = 3, model = "WGS84", height = 0.05) +
-    north(island_crop, symbol = 12, location = "topright") +
+    # Remove north arrow for now (only include in regional map)
+    #north(island_crop, symbol = 12, location = "topright") +
     labs(title = island_i, x = "", y = "", color = "", linetype = "", shape = "")
   print(p)
   ggsave(filename = file.path(outdir, paste("map_island-", island_i, ".png", sep = "")), width = 8, height = 8)
@@ -176,7 +173,7 @@ for (i in 1:length(islands)){
 
 # PLOT Pacific Ocean region showing Gilbert vs Line Islands
 library(rnaturalearth)
-kir_region <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = c("Kiribati", "Australia", "New Zealand", "Papua New Guinea", "Indonesia"))
+kir_region <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = c("Kiribati", "Australia", "New Zealand", "Papua New Guinea", "Indonesia", "Solomon Islands", "New Caledonia", "Vanuatu", "Malaysia", "Philippines", "Vietnam", "Cambodia", "Thailand"))
 kir_shift <- st_shift_longitude(kir_region)
 
 ggplot() + 
@@ -184,6 +181,10 @@ ggplot() +
   geom_sf(data = kir_shift, fill = "NA", colour = "black") +
   geom_rect(aes(xmin = 165, xmax = 180, ymin = -5, ymax = 5), fill = NA, color = "black") +
   geom_rect(aes(xmin = 195, xmax = 205, ymin = 0, ymax = 8), fill = NA, color = "black") +
+  ylim(-50, 10) +
+  #xlim(120, -150) +
+  north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
+  scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
   theme_bw()
 ggsave(filename = file.path(outdir, paste("map_region.png", sep = "")), width = 8, height = 8)
 
@@ -208,11 +209,7 @@ archipel_box = c(xmin = archipel_bounds$min_long + 0,
 # Use box to crop gilbert out of full country map
 gilbert_crop <- st_crop(kir_sf, archipel_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
 
-# Split MULTIPOLYGON into separate POLYGONS
-gilbert_cast <- gilbert_crop %>%
-  st_cast("POLYGON") %>%
-  mutate(island_name = "Not sampled")
-
+islands_labeled <- NULL
 # Loop through each island, create bounding box from site info, and match polygons in gilbert buffer by testing if polygons intersect
 for (i in 1:length(islands)){
   island_i <- islands[i]
@@ -226,23 +223,10 @@ for (i in 1:length(islands)){
   island_buffer_i <- island_buffer %>%
     filter(island == island_i)
   
-  # island_polygon = data.frame(xmin = island_bounds$min_long + island_buffer_i$xmin_buff, 
-  #                             xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
-  #                             ymin = island_bounds$min_lat + island_buffer_i$ymin_buff, 
-  #                             ymax = island_bounds$max_lat + island_buffer_i$ymax_buff) %>%
-  #   # Turn xmin/max and ymin/max into four coordinates
-  #   pivot_longer(cols = all_of(c("xmin", "xmax")), names_to = "x", values_to = "lon") %>%
-  #   pivot_longer(cols = all_of(c("ymin", "ymax")), names_to = "y", values_to = "lat") %>%
-  #   st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = F) %>%
-  #   # Combine coordinates and cast to polygon
-  #   st_combine() %>%
-  #   st_cast("POLYGON")
-  
-  #Try island_polygon without buffer
-  island_polygon = data.frame(xmin = island_bounds$min_long,
-                              xmax = island_bounds$max_long,
-                              ymin = island_bounds$min_lat,
-                              ymax = island_bounds$max_lat) %>%
+  island_polygon = data.frame(xmin = island_bounds$min_long + island_buffer_i$xmin_buff,
+                              xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
+                              ymin = island_bounds$min_lat + island_buffer_i$ymin_buff,
+                              ymax = island_bounds$max_lat + island_buffer_i$ymax_buff) %>%
     # Turn xmin/max and ymin/max into four coordinates
     pivot_longer(cols = all_of(c("xmin", "xmax")), names_to = "x", values_to = "lon") %>%
     pivot_longer(cols = all_of(c("ymin", "ymax")), names_to = "y", values_to = "lat") %>%
@@ -251,73 +235,158 @@ for (i in 1:length(islands)){
     st_combine() %>%
     st_cast("POLYGON")
   
-  # test_polygon <- gilbert_cast$geometry[st_intersects(gilbert_cast$geometry, island_polygon, sparse = FALSE)]
-  # ggplot() +
-  #   geom_sf(data = test_polygon) +
-  #   theme_bw()
-  
-  
-  # test if any of the polygons intersect with island_polygon - if so, assign name island_i
-  # loop through all island_i and island_polygons
-  gilbert_cast <- gilbert_cast %>%
-    mutate(island_test = st_intersects(geometry, island_polygon, sparse = FALSE)) %>%
-    #mutate(island_test = st_within(geometry, island_polygon, sparse = FALSE)) %>%
-    mutate(island_name = case_when(island_name != "Not sampled" ~ island_name,
-                                   island_test == TRUE ~ island_i,
-                                   TRUE ~ "Not sampled")) %>%
-    select(-island_test) 
+  # TRY CROPPING as was done in the island plots above
+  island_crop <- gilbert_crop %>% 
+    st_crop(island_polygon) %>%
+    mutate(island_name = island_i)
+  ggplot() +
+    geom_sf(data = island_crop)
+
+  islands_labeled <- rbind(islands_labeled, island_crop)
+ 
 }
 # Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
 # Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
 
-# Add buffer around island polygons
-# Bind with village_info to get reef health
-gilbert_buffer <- st_buffer(gilbert_cast, dist = 0.01, joinStyle = "ROUND") %>%
-  left_join(village_info %>% select(Island.Name, Rank.Reef.Health) %>% unique(), by = c("island_name" = "Island.Name"))
+# Split MULTIPOLYGON into separate POLYGONS
+gilbert_cast <- gilbert_crop %>%
+  st_cast("POLYGON") %>%
+  mutate(island_name = "Not sampled")
+
+# Add buffer around all polygons
+# Then group together to join buffers
+gilbert_buffer <- st_buffer(gilbert_cast, dist = 0.05, joinStyle = "ROUND") %>%
+  mutate(island_name = "Not sampled") %>%
+  group_by(island_name) %>%
+  summarise(n = n())
+# Add buffer around all sampled island polygons
+sampled_buffer <- st_buffer(islands_labeled, dist = 0.05, joinStyle = "ROUND")
+
+ggplot() +
+  geom_sf(data = gilbert_buffer)
+ggplot() +
+  geom_sf(data = sampled_buffer)
+  
 # Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
 # Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
 # Add ISLAND NAMES TO POLYGONS
 
-# LEFT OFF HERE - try adding BOUNDING BOX (instead of skinny buffer) around each island
+# FIX IT - add this to sampled_buffer above
+# Merge buffer polygons based on having identical island names; currently multiple buffers within a single island
+sampled_buffer <- sampled_buffer %>%
+  left_join(village_info %>% select(Island.Name, Rank.Reef.Health) %>% unique(), by = c("island_name" = "Island.Name")) %>%
+  mutate(Rank.Reef.Health = if_else(island_name == "Not sampled", true = "Not sampled", false = Rank.Reef.Health))
+
 
 # FIX IT: Add color-coding to buffer zones by reef health
 p <- ggplot() +
-  geom_sf(data = gilbert_buffer, aes(color = Rank.Reef.Health)) +
+  geom_sf(data = gilbert_buffer, fill = "gray") +
+  geom_sf(data = sampled_buffer, aes(fill = Rank.Reef.Health)) +
   geom_sf(data = gilbert_crop) +
+  geom_sf_label(data = sampled_buffer, aes(label = island_name), size = 3, nudge_x = 1) +
   theme_bw() +
-  # Add scale bar and north arrow
-  north(gilbert_crop, symbol = 12) +
-  labs(title = "Gilbert Islands", x = "", y = "")
+  xlim(172.5, 177) +
+  labs(title = "Gilbert Islands", x = "", y = "", fill = "Hypothesized Reef Health") +
   # FIX IT - scalebar not working
-  #scalebar(data = gilbert_crop, transform = TRUE, dist_unit = "km", dist = 2000, location = "bottomleft", model = "WGS84")
+  scalebar(data = gilbert_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84")
 
 print(p)
 ggsave(filename = file.path(outdir, paste("map_region-gilbert-islands.png", sep = "")), width = 8, height = 8)
 
 # Repeat for Line Islands
-bounds <- site_info %>%
+line_bounds <- site_info %>%
   filter(Island %in% line_islands) %>%
   dplyr::select(Lat, Long) %>%
   summarise(max_lat = max(Lat),
             min_lat = min(Lat),
             max_long = max(Long),
             min_long = min(Long))
-box = c(xmin = bounds$min_long + 0, 
-        xmax = bounds$max_long + 0.5,
-        ymin = bounds$min_lat - 0.5, 
-        ymax = bounds$max_lat + 0.5)
+line_box = c(xmin = line_bounds$min_long - 1, 
+        xmax = line_bounds$max_long + 0.5,
+        ymin = line_bounds$min_lat - 0.5, 
+        ymax = line_bounds$max_lat + 1)
 
 # Use box to crop island out of kir_sf
-line_islands_crop <- st_crop(kir_sf, box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
-p <- ggplot() +
-  geom_sf(data = line_islands_crop) +
-  theme_bw() +
-  # Add scale bar and north arrow
-  north(line_islands_crop, symbol = 12) +
-  labs(title = "Line Islands", x = "", y = "")
-# FIX IT - scalebar not working
-#scalebar(data = line_islands_crop, transform = TRUE, dist_unit = "km", dist = 2000, location = "bottomleft", model = "WGS84")
+line_islands_crop <- st_crop(kir_sf, line_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
 
-print(p)
+line_islands_labeled <- NULL
+# Loop through each island, create bounding box from site info, and match polygons in gilbert buffer by testing if polygons intersect
+for (i in 1:length(islands)){
+  island_i <- islands[i]
+  island_bounds <- site_info %>%
+    filter(Island == island_i) %>%
+    dplyr::select(Lat, Long) %>% 
+    summarise(max_lat = max(Lat),
+              min_lat = min(Lat),
+              max_long = max(Long),
+              min_long = min(Long))
+  island_buffer_i <- island_buffer %>%
+    filter(island == island_i)
+  
+  island_polygon = data.frame(xmin = island_bounds$min_long + island_buffer_i$xmin_buff,
+                              xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
+                              ymin = island_bounds$min_lat + island_buffer_i$ymin_buff,
+                              ymax = island_bounds$max_lat + island_buffer_i$ymax_buff) %>%
+    # Turn xmin/max and ymin/max into four coordinates
+    pivot_longer(cols = all_of(c("xmin", "xmax")), names_to = "x", values_to = "lon") %>%
+    pivot_longer(cols = all_of(c("ymin", "ymax")), names_to = "y", values_to = "lat") %>%
+    st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = F) %>%
+    # Combine coordinates and cast to polygon
+    st_combine() %>%
+    st_cast("POLYGON")
+  
+  # TRY CROPPING as was done in the island plots above
+  island_crop <- line_islands_crop %>% 
+    st_crop(island_polygon) %>%
+    mutate(island_name = island_i)
+  # ggplot() +
+  #   geom_sf(data = island_crop)
+  
+  line_islands_labeled <- rbind(line_islands_labeled, island_crop)
+
+}
+
+
+# Split MULTIPOLYGON into separate POLYGONS
+line_islands_cast <- line_islands_crop %>%
+  st_cast("POLYGON") %>%
+  mutate(island_name = "Not sampled")
+
+# Add buffer around all polygons
+# Then group together to join buffers
+line_islands_buffer <- st_buffer(line_islands_cast, dist = 0.05, joinStyle = "ROUND") %>%
+  mutate(island_name = "Not sampled") %>%
+  group_by(island_name) %>%
+  summarise(n = n())
+# Add buffer around all sampled island polygons
+sampled_lines_buffer <- st_buffer(line_islands_labeled, dist = 0.05, joinStyle = "ROUND")
+
+ggplot() +
+  geom_sf(data = line_islands_buffer)
+ggplot() +
+  geom_sf(data = sampled_lines_buffer)
+
+# Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
+# Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
+# Add ISLAND NAMES TO POLYGONS
+
+# Merge buffer polygons based on having identical island names; currently multiple buffers within a single island
+sampled_lines_buffer <- sampled_lines_buffer %>%
+  left_join(village_info %>% select(Island.Name, Rank.Reef.Health) %>% unique(), by = c("island_name" = "Island.Name")) %>%
+  mutate(Rank.Reef.Health = if_else(island_name == "Not sampled", true = "Not sampled", false = Rank.Reef.Health))
+
+p <- ggplot() +
+  geom_sf(data = line_islands_buffer, fill = "gray") +
+  geom_sf(data = sampled_lines_buffer, aes(fill = Rank.Reef.Health)) +
+  geom_sf(data = line_islands_crop) +
+  geom_sf_label(data = sampled_lines_buffer, aes(label = island_name), size = 3, nudge_x = 1) +
+  theme_bw() +
+  xlim(-161, -155) +
+  ylim(1, 5) +
+  # Add scale bar and north arrow
+  #north(line_islands_crop, symbol = 12) +
+  labs(title = "Line Islands", x = "", y = "", fill = "Hypothesized Reef Health") +
+  scalebar(data = line_islands_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84", st.dist = 0.04)
+plot(p)
 ggsave(filename = file.path(outdir, paste("map_region-line-islands.png", sep = "")), width = 8, height = 8)
 
