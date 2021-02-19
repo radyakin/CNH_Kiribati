@@ -5,6 +5,8 @@ rm(list=ls())
 library(tidyverse)
 library(sf)
 library(ggsn) # for adding north arrows and scale bar
+library(marmap)
+library(metR) # for labeling contour lines
 datadir <- "Data for mapping"
 outdir <- "Outputs"
 
@@ -55,47 +57,50 @@ islands <- sort(unique(site_info$Island))
 
 # Create custom buffer for each island - based on trial error of default "0" for buffer
 island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
-  mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.3,
-                               island == "Abemama" ~ 0,
-                               island == "Butaritari" ~ 0,
-                               island == "Kiritimati" ~ -0.5, 
-                               island == "N Tabiteuea" ~ 0,
+  mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.165,
+                               island == "Abemama" ~ -0.02,
+                               island == "Butaritari" ~ -0.02,
+                               island == "Kiritimati" ~ -0.03, 
+                               island == "N Tabiteuea" ~ -0.02,
+                               island == "N Tarawa" ~ -0.01,
                                island == "Onotoa" ~ -0.02,
-                               island == "S Tabiteuea" ~ 0,
+                               island == "S Tabiteuea" ~ -0.01,
                                island == "S Tarawa" ~ 0,
-                               island == "Tabuaeran" ~ 0,
+                               island == "Tabuaeran" ~ -0.01,
                                TRUE ~ 0)) %>%
   mutate(xmax_buff = case_when(island == "Abaiang" ~ 0.03,
                                island == "Abemama" ~ 0.02,
-                               island == "Butaritari" ~ 0,
-                               island == "Kiritimati" ~ 0.5, 
-                               island == "N Tabiteuea" ~ 0.02,
+                               island == "Butaritari" ~ 0.02,
+                               island == "Kiritimati" ~ 0.25, 
+                               island == "N Tabiteuea" ~ 0.13,
+                               island == "N Tarawa" ~ 0.02,
                                island == "Onotoa" ~ 0.02,
                                island == "S Tabiteuea" ~ 0.02,
                                island == "S Tarawa" ~ 0.05,
-                               island == "Tabuaeran" ~ 0.5,
+                               island == "Tabuaeran" ~ 0.08,
                                TRUE ~ 0)) %>%
   mutate(ymin_buff = case_when(island == "Abaiang" ~ -0.01,
-                               island == "Abemama" ~ -0.5,
-                               island == "Butaritari" ~ 0,
-                               island == "Kiritimati" ~ -0.5, 
-                               island == "N Tabiteuea" ~ -0.5,
+                               island == "Abemama" ~ -0.038,
+                               island == "Butaritari" ~ -0.015,
+                               island == "Kiritimati" ~ -0.215, 
+                               island == "N Tabiteuea" ~ -0.091,
+                               island == "N Tarawa" ~ -0.02,
                                island == "Onotoa" ~ -0.02,
-                               island == "S Tabiteuea" ~ -0.1,
-                               island == "S Tarawa" ~ 0,
-                               island == "Tabuaeran" ~ -0.5,
+                               island == "S Tabiteuea" ~ -0.01,
+                               island == "S Tarawa" ~ -0.011,
+                               island == "Tabuaeran" ~ -0.016,
                                TRUE ~ 0)) %>%
-  mutate(ymax_buff = case_when(island == "Abaiang" ~ 0.2,
+  mutate(ymax_buff = case_when(island == "Abaiang" ~ 0.12,
                                island == "Abemama" ~ 0.02,
-                               island == "Butaritari" ~ 0,
-                               island == "Kiritimati" ~ 0.5, 
-                               island == "N Tabiteuea" ~ 0.15,
+                               island == "Butaritari" ~ 0.005,
+                               island == "Kiritimati" ~ 0.04, 
+                               island == "N Tabiteuea" ~ 0.05,
                                island == "Onotoa" ~ 0.02,
-                               island == "S Tabiteuea" ~ 0.02,
-                               island == "S Tarawa" ~ 0,
-                               island == "Tabuaeran" ~ 0.5,
+                               island == "S Tabiteuea" ~ 0.062,
+                               island == "S Tarawa" ~ 0.01,
+                               island == "Tabuaeran" ~ 0.04,
                                TRUE ~ 0))
-  
+
 # Loop through islands and plot
 for (i in 1:length(islands)){
   island_i <- islands[i]
@@ -109,13 +114,29 @@ for (i in 1:length(islands)){
   island_buffer_i <- island_buffer %>%
     filter(island == island_i)
   island_box = c(xmin = island_bounds$min_long + island_buffer_i$xmin_buff, 
-          xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
-          ymin = island_bounds$min_lat + island_buffer_i$ymin_buff, 
-          ymax = island_bounds$max_lat + island_buffer_i$ymax_buff)
+                 xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
+                 ymin = island_bounds$min_lat + island_buffer_i$ymin_buff, 
+                 ymax = island_bounds$max_lat + island_buffer_i$ymax_buff)
   # Use box to crop island out of kir_sf
   #island_crop <- st_crop(st_geometry(kir_sf), box)
   island_crop <- st_crop(kir_sf, island_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
   
+  # Use box to get bathy data, see tutorial: https://cran.r-project.org/web/packages/marmap/vignettes/marmap.pdf
+  if (island_i == "N Tabiteuea"){
+    island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]], lon2 = island_box[[2]] + 0.1, lat1 = island_box[[3]] - 0.05, lat2 = island_box[[4]], resolution = 1, keep = TRUE, path = datadir) 
+  } else if (island_i == "N Tarawa"){
+    island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]], lon2 = island_box[[2]] + 0.1, lat1 = island_box[[3]], lat2 = island_box[[4]] + 0.1, resolution = 1, keep = TRUE, path = datadir) 
+  } else if (island_i == "Onotoa"){
+    island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]], lon2 = island_box[[2]], lat1 = island_box[[3]], lat2 = island_box[[4]] + 0.05, resolution = 1, keep = TRUE, path = datadir) 
+  } else if (island_i == "S Tabiteuea"){
+    island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]], lon2 = island_box[[2]] + 0.1, lat1 = island_box[[3]], lat2 = island_box[[4]] + 0.1, resolution = 1, keep = TRUE, path = datadir) 
+  } else if (island_i == "Tabuaeran"){
+    island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]] - 0.05, lon2 = island_box[[2]], lat1 = island_box[[3]], lat2 = island_box[[4]] + 0.05, resolution = 1, keep = TRUE, path = datadir) 
+  } else {
+    island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]], lon2 = island_box[[2]], lat1 = island_box[[3]], lat2 = island_box[[4]], resolution = 1, keep = TRUE, path = datadir)
+  }
+  # fortify() not necessary: geom_contour automatically converts bathy object to data.frame
+  island_bathy_i <- fortify(island_bathy_i)
   
   # Subset ecological site info:
   island_dat <- site_info %>%
@@ -124,8 +145,8 @@ for (i in 1:length(islands)){
     filter(Description == "Site") %>%
     filter(Notes %in% c("Forereef", "Lagoon", "Backreef", "Soft-bottom backreef")) %>%
     select(Lat, Long, Notes) #%>%
-    #st_as_sf(coords = c("Long", "Lat")) %>%
-    #st_set_crs(value = "WGS84") # NOTE: already checked and no difference between projecting points to CRS and using geom_sf vs just using geom_point
+  #st_as_sf(coords = c("Long", "Lat")) %>%
+  #st_set_crs(value = "WGS84") # NOTE: already checked and no difference between projecting points to CRS and using geom_sf vs just using geom_point
   # Easier to plot manta paths with geom_line vs geom_sf so don't project points to CRS
   manta_tows <- island_dat %>%
     filter(Description == "Site") %>%
@@ -137,12 +158,14 @@ for (i in 1:length(islands)){
   villages <- island_dat %>%
     filter(Description == "Village") %>%
     select(Lat, Long, Name_cleaned, Rank.Market.Integration)
-  
-
+  max_depth <- max(abs(island_bathy_i$z))
   p <- ggplot() +
-    geom_sf(data = island_crop) +
+    geom_contour_fill(data = island_bathy_i, aes(x = x, y = y, z = z), show.legend = FALSE, binwidth = 500) +
+    geom_contour(data = island_bathy_i, aes(x = x, y = y, z = z), colour = "gray", binwidth = 500) +
+    metR::geom_text_contour(data = island_bathy_i, aes(x=x, y=y, z = z*-1), stroke = 0.2, breaks = seq(500, max_depth, by = 500), label.placement = label_placement_n(n=1)) +
+    geom_sf(data = island_crop, colour = "black") +
     # VILLAGE and REEF INFO (from Table 1)
-    geom_point(data = villages, aes(x = Long, y = Lat, color = Rank.Market.Integration), shape = 17, size = 3) +
+    geom_point(data = villages, aes(x = Long, y = Lat, color = fct_relevel(Rank.Market.Integration, c("Low", "Medium", "High"))), shape = 17, size = 3) +
     #geom_label(data = villages, aes(x = Long, y = Lat, label = Name_cleaned), fontface = "italic", nudge_y = 0.008) +
     # MANTA TOWS
     # For track lines:
@@ -158,16 +181,36 @@ for (i in 1:length(islands)){
     # with geom_sf
     # geom_sf(data = dive_sites, aes(color = Notes)) +
     theme_bw() +
-    # Add scale bar and north arrow
-    scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84") +
-    # Custom scalebar for S Tabiteuae, change scalebar:
-    #scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "topright", st.size = 3, model = "WGS84") +
+    theme(legend.position = "bottom") + 
+    labs(title = island_i, x = "", y = "", color = "Hypothesized Market Integration", linetype = "", shape = "") +
+    # use coord_sf to cut off geom_contour which extends beyond map limits
+    coord_sf(xlim = c(island_box[[1]], island_box[[2]]), ylim = c(island_box[[3]], island_box[[4]]), expand = FALSE)
+  
+  # CONDITIONALLY add scalebar
+  if (island_i == "Kirimati"){
+    # Custom scalebar for Kiritimati, change scalebar:
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 5, location = "bottomleft", st.size = 3, model = "WGS84")
+  } else if (island_i == "N Tabiteuea"){
+    # Custom scalebar for N Tabiteuea, change scalebar:
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 174.65, y = -1.375))
+  } else if (island_i == "N Tarawa"){
+    # Custom scalebar for N Tarawa, change scalebar:
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 172.95, y = 1.4))
+  } else if (island_i == "S Tabiteuea"){
+    # Custom scalebar for S Tabiteuea, change scalebar:
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 174.92, y = -1.54))
+  } else if (island_i == "S Taraw"){
     # Custom scalebar for S Tarawa, change scalebar:
-    #scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomright", st.size = 3, model = "WGS84", height = 0.05) +
-    # Remove north arrow for now (only include in regional map)
-    #north(island_crop, symbol = 12, location = "topright") +
-    labs(title = island_i, x = "", y = "", color = "", linetype = "", shape = "")
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 172.91, y = 1.335))
+  } else {
+    # Add scale bar and north arrow
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84")
+  }
   print(p)
+  # Warning message:
+  #   Computation failed in `stat_text_contour()`:
+  #   object 'rlang_hash' not found 
+  # If warning message appears, try reinstalling rlang package
   ggsave(filename = file.path(outdir, paste("map_island-", island_i, ".png", sep = "")), width = 8, height = 8)
 }
 
@@ -210,7 +253,7 @@ archipel_box = c(xmin = archipel_bounds$min_long + 0,
 gilbert_crop <- st_crop(kir_sf, archipel_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
 
 islands_labeled <- NULL
-# Loop through each island, create bounding box from site info, and match polygons in gilbert buffer by testing if polygons intersect
+# Loop through each island, create bounding box from site info, and crop each island out of the gilbert islands
 for (i in 1:length(islands)){
   island_i <- islands[i]
   island_bounds <- site_info %>%
@@ -259,26 +302,17 @@ gilbert_buffer <- st_buffer(gilbert_cast, dist = 0.05, joinStyle = "ROUND") %>%
   mutate(island_name = "Not sampled") %>%
   group_by(island_name) %>%
   summarise(n = n())
-# Add buffer around all sampled island polygons
-sampled_buffer <- st_buffer(islands_labeled, dist = 0.05, joinStyle = "ROUND")
+
+# Add buffer around all sampled island polygons and join with reef health data
+sampled_buffer <- st_buffer(islands_labeled, dist = 0.05, joinStyle = "ROUND") %>%
+  left_join(village_info %>% select(Island.Name, Rank.Reef.Health) %>% unique(), by = c("island_name" = "Island.Name")) %>%
+  mutate(Rank.Reef.Health = if_else(island_name == "Not sampled", true = "Not sampled", false = Rank.Reef.Health))
 
 ggplot() +
   geom_sf(data = gilbert_buffer)
 ggplot() +
   geom_sf(data = sampled_buffer)
   
-# Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
-# Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
-# Add ISLAND NAMES TO POLYGONS
-
-# FIX IT - add this to sampled_buffer above
-# Merge buffer polygons based on having identical island names; currently multiple buffers within a single island
-sampled_buffer <- sampled_buffer %>%
-  left_join(village_info %>% select(Island.Name, Rank.Reef.Health) %>% unique(), by = c("island_name" = "Island.Name")) %>%
-  mutate(Rank.Reef.Health = if_else(island_name == "Not sampled", true = "Not sampled", false = Rank.Reef.Health))
-
-
-# FIX IT: Add color-coding to buffer zones by reef health
 p <- ggplot() +
   geom_sf(data = gilbert_buffer, fill = "gray") +
   geom_sf(data = sampled_buffer, aes(fill = Rank.Reef.Health)) +
