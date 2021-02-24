@@ -8,6 +8,7 @@ library(ggsn) # for adding north arrows and scale bar
 library(marmap)
 library(metR) # for labeling contour lines
 library(rnaturalearth) # ne_countries (world polygons)
+library(RColorBrewer) # for display.brewer.pal
 datadir <- "Data for mapping"
 outdir <- "Outputs"
 
@@ -210,15 +211,16 @@ for (i in 1:length(islands)){
     # with geom_sf
     # geom_sf(data = dive_sites, aes(color = Notes)) +
     theme_bw() +
-    theme(legend.position = "bottom", legend.direction = "vertical") + 
+    theme(legend.position = "none") +
     labs(title = island_i, x = "", y = "", color = "Hypothesized Market Integration", shape = "Reef Sampling Sites", linetype = "", shape = "") +
     # use coord_sf to cut off geom_contour which extends beyond map limits
     coord_sf(xlim = c(island_box[[1]], island_box[[2]]), ylim = c(island_box[[3]], island_box[[4]]), expand = FALSE)
   
-  # CONDITIONALLY add scalebar
-  if (island_i == "Kirimati"){
+  # CONDITIONALLY add scalebar and legend
+  if (island_i == "Kiritimati"){
     # Custom scalebar for Kiritimati, change scalebar:
-    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 5, location = "bottomleft", st.size = 3, model = "WGS84")
+    p <- p + 
+      scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 5, location = "bottomleft", st.size = 3, model = "WGS84")
   } else if (island_i == "N Tabiteuea"){
     # Custom scalebar for N Tabiteuea, change scalebar:
     p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 174.65, y = -1.375))
@@ -231,16 +233,21 @@ for (i in 1:length(islands)){
   } else if (island_i == "S Taraw"){
     # Custom scalebar for S Tarawa, change scalebar:
     p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 172.91, y = 1.335))
+  } else if (island_i == "Tabuaeran"){
+    # Custom scalebar for S Tarawa, change scalebar:
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84") +
+      theme(legend.position = "right", legend.direction = "vertical", legend.box = "vertical", legend.box.just = "left")
   } else {
     # Add scale bar and north arrow
     p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84")
   }
   print(p)
+  assign(paste("p_", str_to_lower(str_replace(island_i, " ", "_")), sep = ""), p)
   # Warning message:
   #   Computation failed in `stat_text_contour()`:
   #   object 'rlang_hash' not found 
   # If warning message appears, try reinstalling rlang package
-  ggsave(filename = file.path(outdir, paste("map_island-", island_i, ".png", sep = "")), width = 8, height = 8)
+  #ggsave(filename = file.path(outdir, paste("map_island-", island_i, ".png", sep = "")), width = 8, height = 8)
 }
 
 #########################################################################################################
@@ -249,7 +256,7 @@ for (i in 1:length(islands)){
 kir_region <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = c("Kiribati", "Australia", "New Zealand", "Papua New Guinea", "Indonesia", "Solomon Islands", "New Caledonia", "Vanuatu", "Malaysia", "Philippines", "Vietnam", "Cambodia", "Thailand"))
 kir_shift <- st_shift_longitude(kir_region)
 
-ggplot() + 
+p_region <- ggplot() + 
   #geom_sf(data = kir_region, fill = "NA", colour = "black") +
   geom_sf(data = kir_shift, fill = "NA", colour = "black") +
   geom_rect(aes(xmin = 165, xmax = 180, ymin = -5, ymax = 5), fill = NA, color = "black") +
@@ -259,7 +266,8 @@ ggplot() +
   north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
   scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
   theme_bw()
-ggsave(filename = file.path(outdir, paste("map_region.png", sep = "")), width = 8, height = 8)
+print(p_region)
+#ggsave(filename = file.path(outdir, paste("map_region.png", sep = "")), width = 8, height = 8)
 
 
 #########################################################################################################
@@ -352,7 +360,7 @@ display.brewer.pal(8, "Greens")
 reef_colors <- brewer.pal(8, "Greens")[c(8, 6, 4)]
 
 
-p <- ggplot() +
+p_gilbert <- ggplot() +
   geom_sf(data = gilbert_buffer, aes(fill = island_name)) +
   geom_sf(data = sampled_buffer, aes(fill = Rank.Reef.Health)) +
   scale_fill_manual(breaks = c("High", "Medium", "Low", "Not sampled"), values = c(reef_colors, "gray")) +
@@ -366,8 +374,8 @@ p <- ggplot() +
   scalebar(data = gilbert_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84", st.size = 3) +
   theme(legend.position = "right", legend.direction = "vertical")
 
-print(p)
-ggsave(filename = file.path(outdir, paste("map_region-gilbert-islands.png", sep = "")), width = 8, height = 8)
+print(p_gilbert)
+#ggsave(filename = file.path(outdir, paste("map_region-gilbert-islands.png", sep = "")), width = 8, height = 8)
 
 #########################################################################################################
 #########################################################################################################
@@ -452,7 +460,7 @@ ggplot() +
 ggplot() +
   geom_sf(data = sampled_lines_buffer)
 
-p <- ggplot() +
+p_line <- ggplot() +
   geom_sf(data = line_islands_buffer, aes(fill = island_name)) +
   geom_sf(data = sampled_lines_buffer, aes(fill = Rank.Reef.Health)) +
   scale_fill_manual(breaks = c("Medium", "Low", "Not sampled"), values = c(reef_colors[-1], "gray")) + # Have to remove first color in reef_colors because only Medium and Low 
@@ -468,6 +476,12 @@ p <- ggplot() +
   theme(legend.position = "none") # Just use Gilbert Islands legend to apply to both
     
 #theme(legend.position = "right", legend.direction = "vertical")
-plot(p)
-ggsave(filename = file.path(outdir, paste("map_region-line-islands.png", sep = "")), width = 8, height = 8)
+plot(p_line)
+#ggsave(filename = file.path(outdir, paste("map_region-line-islands.png", sep = "")), width = 8, height = 8)
 
+# FIX IT - move to top if using this for arranging plots
+# LEFT OFF HERE - remove "white space?" in top and bottom margins of Tabuaeran
+library(cowplot)
+p_line_1 <- plot_grid(p_kiritimati, p_tabuaeran, ncol = 2, align = "hv", axis = "tb")
+plot(p_line_1)
+plot_grid(p_line_1, p_line, nrow = 2)
