@@ -211,12 +211,14 @@ for (i in 1:length(islands)){
     # with geom_sf
     # geom_sf(data = dive_sites, aes(color = Notes)) +
     theme_bw() +
-    theme(legend.position = "none") +
+    #theme(legend.position = "none") +
+    # Give all graphs a legend, and if needed just reset as p + theme(legend.position = "none") downstream
+    theme(legend.position = "right", legend.direction = "vertical", legend.box = "vertical", legend.box.just = "left", legend.text = element_text(size = 8), legend.title = element_text(size = 10)) +
     labs(title = island_i, x = "", y = "", color = "Hypothesized Market Integration", shape = "Reef Sampling Sites", linetype = "", shape = "") +
     # use coord_sf to cut off geom_contour which extends beyond map limits
     coord_sf(xlim = c(island_box[[1]], island_box[[2]]), ylim = c(island_box[[3]], island_box[[4]]), expand = FALSE)
   
-  # CONDITIONALLY add scalebar and legend
+  # CONDITIONALLY add scalebar
   if (island_i == "Kiritimati"){
     # Custom scalebar for Kiritimati, change scalebar:
     p <- p + 
@@ -234,14 +236,13 @@ for (i in 1:length(islands)){
     # Custom scalebar for S Tarawa, change scalebar:
     p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84", anchor = c(x = 172.91, y = 1.335))
   } else if (island_i == "Tabuaeran"){
-    # Custom scalebar for S Tarawa, change scalebar:
-    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84") +
-      theme(legend.position = "right", legend.direction = "vertical", legend.box = "vertical", legend.box.just = "left")
+    # Custom scalebar for Tabuaeran, change scalebar:
+    p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84")
   } else {
-    # Add scale bar and north arrow
+    # Add default scale bar
     p <- p + scalebar(island_crop, transform = TRUE, dist_unit = "km", dist = 2, location = "bottomleft", st.size = 3, model = "WGS84")
   }
-  print(p)
+  #print(p)
   assign(paste("p_", str_to_lower(str_replace(island_i, " ", "_")), sep = ""), p)
   # Warning message:
   #   Computation failed in `stat_text_contour()`:
@@ -256,12 +257,16 @@ for (i in 1:length(islands)){
 kir_region <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = c("Kiribati", "Australia", "New Zealand", "Papua New Guinea", "Indonesia", "Solomon Islands", "New Caledonia", "Vanuatu", "Malaysia", "Philippines", "Vietnam", "Cambodia", "Thailand"))
 kir_shift <- st_shift_longitude(kir_region)
 
+line_box <- geom_rect(aes(xmin = 199, xmax = 205, ymin = 1, ymax = 5), fill = NA, color = "black")
+gilbert_box <- geom_rect(aes(xmin = 172, xmax = 177, ymin = -2, ymax = 3), fill = NA, color = "black")
+
 p_region <- ggplot() + 
   #geom_sf(data = kir_region, fill = "NA", colour = "black") +
   geom_sf(data = kir_shift, fill = "NA", colour = "black") +
-  geom_rect(aes(xmin = 165, xmax = 180, ymin = -5, ymax = 5), fill = NA, color = "black") +
-  geom_rect(aes(xmin = 195, xmax = 205, ymin = 0, ymax = 8), fill = NA, color = "black") +
+  gilbert_box +
+  line_box +
   ylim(-50, 10) +
+  labs(x = "", y = "") +
   #xlim(120, -150) +
   north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
   scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
@@ -269,6 +274,29 @@ p_region <- ggplot() +
 print(p_region)
 #ggsave(filename = file.path(outdir, paste("map_region.png", sep = "")), width = 8, height = 8)
 
+p_region_line <- ggplot() + 
+  #geom_sf(data = kir_region, fill = "NA", colour = "black") +
+  geom_sf(data = kir_shift, fill = "NA", colour = "black") +
+  line_box +
+  ylim(-50, 10) +
+  labs(x = "", y = "") +
+  #xlim(120, -150) +
+  north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
+  scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
+  theme_bw()
+print(p_region_line)
+
+p_region_gilbert <- ggplot() + 
+  #geom_sf(data = kir_region, fill = "NA", colour = "black") +
+  geom_sf(data = kir_shift, fill = "NA", colour = "black") +
+  gilbert_box + 
+  ylim(-50, 10) +
+  labs(x = "", y = "") +
+  #xlim(120, -150) +
+  north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
+  scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
+  theme_bw()
+print(p_region_gilbert)
 
 #########################################################################################################
 #########################################################################################################
@@ -372,7 +400,7 @@ p_gilbert <- ggplot() +
   xlim(172.5, 177) +
   labs(title = "Gilbert Islands", x = "", y = "", fill = "Hypothesized Reef Health") +
   scalebar(data = gilbert_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84", st.size = 3) +
-  theme(legend.position = "right", legend.direction = "vertical")
+  theme(legend.position = "right", legend.direction = "vertical", legend.text = element_text(size = 8), legend.title = element_text(size = 10))
 
 print(p_gilbert)
 #ggsave(filename = file.path(outdir, paste("map_region-gilbert-islands.png", sep = "")), width = 8, height = 8)
@@ -473,15 +501,119 @@ p_line <- ggplot() +
   #north(line_islands_crop, symbol = 12) +
   labs(title = "Line Islands", x = "", y = "", fill = "Hypothesized Reef Health") +
   scalebar(data = line_islands_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84", st.size = 3, st.dist = 0.05) +
-  theme(legend.position = "none") # Just use Gilbert Islands legend to apply to both
-    
+  #theme(legend.position = "none") # Just use Gilbert Islands legend to apply to both
+  theme(legend.position = "right", legend.direction = "vertical", legend.text = element_text(size = 8), legend.title = element_text(size = 10))
+
 #theme(legend.position = "right", legend.direction = "vertical")
 plot(p_line)
 #ggsave(filename = file.path(outdir, paste("map_region-line-islands.png", sep = "")), width = 8, height = 8)
 
-# FIX IT - move to top if using this for arranging plots
-# LEFT OFF HERE - remove "white space?" in top and bottom margins of Tabuaeran
+######################################################################################################
+#### COMBINE INTO MULTIPANEL PLOTS
+
 library(cowplot)
-p_line_1 <- plot_grid(p_kiritimati, p_tabuaeran, ncol = 2, align = "hv", axis = "tb")
-plot(p_line_1)
-plot_grid(p_line_1, p_line, nrow = 2)
+legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
+      legend.box.margin = margin(0, 0, 0, 0), 
+      legend.text = element_text(size = 7), 
+      legend.title = element_text(size = 7))
+
+
+######################################################################################################
+# Line Islands Figure
+p_kirimati_panel <- p_kiritimati + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_tabuaeran_panel <- p_tabuaeran + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_line_panel <- p_line + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_region_line_panel <- p_region_line + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+line_market_legend <- get_legend(p_kiritimati + legend_theme)
+line_reef_legend <- get_legend(p_line + legend_theme)
+# line_full_legend <- plot_grid(line_reef_legend, line_market_legend, 
+#                               ncol = 1, 
+#                               nrow = 2, 
+#                               align = 'vh',
+#                               rel_heights = c(1, 0.5))
+
+# Working code:
+line_top_row <- plot_grid(p_kirimati_panel, 
+                          p_tabuaeran_panel,
+                          line_market_legend,
+                          nrow = 1,
+                          ncol = 3,
+                          rel_widths = c(0.85, 1, 0.3))
+line_top_row
+ggsave(filename = file.path(outdir, "map_figure-X_line-islands-row1.png"), width = 11, height = 8.5)
+
+
+line_bottom_row <- plot_grid(p_region_line_panel,
+                             p_line_panel,
+                             line_reef_legend,
+                             nrow = 1,
+                             ncol = 3,
+                             rel_widths = c(1, 0.8, 0.25),
+                             align = 'h', axis = 'tb')
+line_bottom_row
+ggsave(filename = file.path(outdir, "map_figure-X_line-islands-row2.png"), width = 11, height = 8.5)
+
+plot_grid(line_top_row, 
+          line_bottom_row + theme(plot.margin = unit(c(-3, 0, 0, 0), "cm")),
+          nrow = 2,
+          ncol = 1,
+          rel_heights = c(1, 0.7))
+          #align = 'v', axis = 'lr')
+ggsave(filename = file.path(outdir, "map_figure-X_line-islands.png"), width = 11, height = 8.5)
+
+######################################################################################################
+# Gilbert Islands Figure
+p_abaiang_panel <- p_abaiang + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_abemama_panel <- p_abemama + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_butaritari_panel <- p_butaritari + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_n_tabiteuea_panel <- p_n_tabiteuea + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_n_tarawa_panel <- p_n_tarawa + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_onotoa_panel <- p_onotoa + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_s_tabiteuea_panel <- p_s_tabiteuea + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_s_tarawa_panel <- p_s_tarawa + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+
+
+p_gilbert_panel <- p_gilbert + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p_region_gilbert_panel <- p_region_gilbert + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
+gilbert_market_legend <- get_legend(p_abaiang + legend_theme)
+gilbert_reef_legend <- get_legend(p_gilbert + legend_theme)
+
+gilbert_row_1 <- plot_grid(p_abaiang_panel, 
+                           p_abemama_panel,
+                           p_butaritari_panel,
+                           p_n_tabiteuea_panel,
+                           gilbert_market_legend,
+                           nrow = 1,
+                           ncol = 5,
+                           rel_widths = c(0.75, 0.65, 1, 0.62, 0.5))
+gilbert_row_1
+ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands-row1.png"), width = 11, height = 8.5)
+
+gilbert_row_2 <- plot_grid(p_n_tarawa_panel, 
+                           p_onotoa_panel,
+                           p_s_tabiteuea_panel,
+                           p_s_tarawa_panel,
+                           nrow = 1,
+                           ncol = 4,
+                           rel_widths = c(0.71, 0.65, 0.79, 1))
+gilbert_row_2
+ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands-row2.png"), width = 11, height = 8.5)
+
+gilbert_row_3 <- plot_grid(p_region_gilbert_panel, 
+                           p_gilbert_panel,
+                           gilbert_reef_legend,
+                           nrow = 1,
+                           ncol = 3,
+                           rel_widths = c(1, 0.52, 0.2),
+                           align = 'h', axis = 'tb')
+gilbert_row_3
+ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands-row3.png"), width = 11, height = 8.5)
+
+plot_grid(gilbert_row_1, 
+          gilbert_row_2 + theme(plot.margin = unit(c(-3, 0, 0, 0), "cm")),
+          gilbert_row_3 + theme(plot.margin = unit(c(-2, 0, 0, -0.5), "cm")),
+          nrow = 3,
+          ncol = 1)
+#align = 'v', axis = 'lr')
+ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands.png"), width = 11, height = 8.5)
+
