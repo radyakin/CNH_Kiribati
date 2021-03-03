@@ -9,6 +9,7 @@ library(marmap)
 library(metR) # for labeling contour lines
 library(rnaturalearth) # ne_countries (world polygons)
 library(RColorBrewer) # for display.brewer.pal
+library(cowplot) # multipanel plotting
 datadir <- "Data for mapping"
 outdir <- "Outputs"
 
@@ -257,19 +258,27 @@ for (i in 1:length(islands)){
 kir_region <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = c("Kiribati", "Australia", "New Zealand", "Papua New Guinea", "Indonesia", "Solomon Islands", "New Caledonia", "Vanuatu", "Malaysia", "Philippines", "Vietnam", "Cambodia", "Thailand"))
 kir_shift <- st_shift_longitude(kir_region)
 
-line_box <- geom_rect(aes(xmin = 199, xmax = 205, ymin = 1, ymax = 5), fill = NA, color = "black")
-gilbert_box <- geom_rect(aes(xmin = 172, xmax = 177, ymin = -2, ymax = 3), fill = NA, color = "black")
+line_box <- geom_rect(aes(xmin = 199.5, xmax = 204.5, ymin = 0.75, ymax = 5.25), fill = NA, color = "purple", size = 1)
+gilbert_box <- geom_rect(aes(xmin = 172, xmax = 179.5, ymin = -1.5, ymax = 3.5), fill = NA, color = "purple", size = 1)
+
+line_label <- st_point(c(202, 3))
+gilbert_label <- st_point(c(174.5, 0.5))
+labels_sf <- st_as_sf(data.frame(name = c("Gilbert", "Line"),
+                            geom = st_sfc(gilbert_label, line_label)))
+st_crs(labels_sf) <- st_crs(kir_shift)
+labels_sf_shift <- st_shift_longitude(labels_sf)
 
 p_region <- ggplot() + 
   #geom_sf(data = kir_region, fill = "NA", colour = "black") +
   geom_sf(data = kir_shift, fill = "NA", colour = "black") +
   gilbert_box +
   line_box +
-  ylim(-50, 10) +
+  geom_sf_label(data = labels_sf_shift, aes(label = name), size = 3, nudge_y = c(6.5, 5.5), nudge_x = c(1, 0)) +
+  ylim(-50, 15) +
+  xlim(130, 210) +
   labs(x = "", y = "") +
-  #xlim(120, -150) +
-  north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
-  scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
+  north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 205, y = -40)) +
+  scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 205, y = -45)) +
   theme_bw()
 print(p_region)
 #ggsave(filename = file.path(outdir, paste("map_region.png", sep = "")), width = 8, height = 8)
@@ -280,7 +289,6 @@ p_region_line <- ggplot() +
   line_box +
   ylim(-50, 10) +
   labs(x = "", y = "") +
-  #xlim(120, -150) +
   north(kir_shift, symbol = 12, location = "bottomright", anchor = c(x = 210, y = -40)) +
   scalebar(kir_shift, transform = TRUE, dist_unit = "km", dist = 1000, location = "bottomright", st.size = 3, model = "WGS84", anchor = c(x = 210, y = -45)) +
   theme_bw()
@@ -379,10 +387,11 @@ sampled_buffer <- st_buffer(islands_labeled, dist = 0.05, joinStyle = "ROUND") %
   mutate(Rank.Reef.Health = as.factor(Rank.Reef.Health)) %>%
   mutate(Rank.Reef.Health = fct_relevel(Rank.Reef.Health, "Low", "Medium", "High"))
 
-ggplot() +
-  geom_sf(data = gilbert_buffer)
-ggplot() +
-  geom_sf(data = sampled_buffer)
+# Check the two gilbert layers
+# ggplot() +
+#   geom_sf(data = gilbert_buffer)
+# ggplot() +
+#   geom_sf(data = sampled_buffer)
 
 display.brewer.pal(8, "Greens")
 reef_colors <- brewer.pal(8, "Greens")[c(8, 6, 4)]
@@ -395,9 +404,9 @@ p_gilbert <- ggplot() +
   # Plot islands:
   geom_sf(data = gilbert_crop, color = "black", size = 0.1) +
   # nudge all labels to the right by one unit, nudge S Tarawa down by 0.07
-  geom_sf_label(data = sampled_buffer, aes(label = island_name), size = 3, nudge_x = 1, nudge_y = c(0, 0, 0, 0, 0, 0, 0, -0.07)) +
+  geom_sf_label(data = sampled_buffer, aes(label = island_name), size = 2, nudge_x = 1, nudge_y = c(0, 0, 0, 0, 0, 0, 0, -0.07)) +
   theme_bw() +
-  xlim(172.5, 177) +
+  xlim(172.5, 179) +
   labs(title = "Gilbert Islands", x = "", y = "", fill = "Hypothesized Reef Health") +
   scalebar(data = gilbert_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84", st.size = 3) +
   theme(legend.position = "right", legend.direction = "vertical", legend.text = element_text(size = 8), legend.title = element_text(size = 10))
@@ -483,19 +492,20 @@ sampled_lines_buffer <- st_buffer(line_islands_labeled, dist = 0.05, joinStyle =
   mutate(Rank.Reef.Health = as.factor(Rank.Reef.Health)) %>%
   mutate(Rank.Reef.Health = fct_relevel(Rank.Reef.Health, "Low", "Medium"))
 
-ggplot() +
-  geom_sf(data = line_islands_buffer)
-ggplot() +
-  geom_sf(data = sampled_lines_buffer)
+# Check two line islands layers
+# ggplot() +
+#   geom_sf(data = line_islands_buffer)
+# ggplot() +
+#   geom_sf(data = sampled_lines_buffer)
 
 p_line <- ggplot() +
   geom_sf(data = line_islands_buffer, aes(fill = island_name)) +
   geom_sf(data = sampled_lines_buffer, aes(fill = Rank.Reef.Health)) +
   scale_fill_manual(breaks = c("Medium", "Low", "Not sampled"), values = c(reef_colors[-1], "gray")) + # Have to remove first color in reef_colors because only Medium and Low 
   geom_sf(data = line_islands_crop, color = "black", size = 0.1) +
-  geom_sf_label(data = sampled_lines_buffer, aes(label = island_name), size = 3, nudge_x = 1) +
+  geom_sf_label(data = sampled_lines_buffer, aes(label = island_name), size = 2, nudge_y = 0.5) +
   theme_bw() +
-  xlim(-161, -155) +
+  xlim(-160.5, -156.5) +
   ylim(1, 5) +
   # Add scale bar and north arrow
   #north(line_islands_crop, symbol = 12) +
@@ -509,16 +519,115 @@ plot(p_line)
 #ggsave(filename = file.path(outdir, paste("map_region-line-islands.png", sep = "")), width = 8, height = 8)
 
 ######################################################################################################
-#### COMBINE INTO MULTIPANEL PLOTS
+# COMBINE INTO MULTIPANEL PLOTS
+######################################################################################################
+# Version 1: Line and Gilbert Islands as a single figure
 
-library(cowplot)
 legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
-      legend.box.margin = margin(0, 0, 0, 0), 
-      legend.text = element_text(size = 7), 
-      legend.title = element_text(size = 7))
+                      legend.box.margin = margin(c(0, 0, 0, 0)), 
+                      legend.text = element_text(size = 7), 
+                      legend.title = element_text(size = 7))
+panel_theme <- theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
 
+p_abaiang_panel <- p_abaiang + panel_theme
+p_abemama_panel <- p_abemama + panel_theme
+p_butaritari_panel <- p_butaritari + theme(legend.position = "none", plot.margin = unit(c(0, -0.5, 0, 0), "cm"))
+
+p_kiritimati_panel <- p_kiritimati + panel_theme 
+p_n_tabiteuea_panel <- p_n_tabiteuea + panel_theme
+p_n_tarawa_panel <- p_n_tarawa + panel_theme
+p_onotoa_panel <- p_onotoa + theme(legend.position = "none", plot.margin = unit(c(0, 0.5, 0, 0), "cm")) # add small margin to final plot in row
+
+p_s_tabiteuea_panel <- p_s_tabiteuea + panel_theme
+p_s_tarawa_panel <- p_s_tarawa + panel_theme
+p_tabuaeran_panel <- p_tabuaeran  + theme(legend.position = "none", plot.margin = unit(c(0, 0.5, 0, 0), "cm"))
+
+# Insets are difficult to control once we move to multipanel image - remove inset for now
+# p_gilbert_inset <- ggdraw(p_gilbert + panel_theme) + draw_plot(p_region_gilbert + theme_half_open(), x = 1, y = 0.98, width = 0.65, height = 0.65, vjust = 1, hjust = 1) #+ panel_theme
+# p_gilbert_inset
+# ggsave(filename = file.path(outdir, "map_figure-X_gilbert-with-inset.png"), width = 8.5, height = 11)
+# 
+# p_line_inset <- ggdraw(p_line + panel_theme) + draw_plot(p_region_line + theme_half_open(), x = 1, y = 0.95, width = 0.65, height = 0.65, vjust = 1, hjust = 1)
+# p_line_inset
+# ggsave(filename = file.path(outdir, "map_figure-X_line-with-inset.png"), width = 8.5, height = 11)
+
+p_gilbert_panel <- p_gilbert + panel_theme
+p_line_panel <- p_line + panel_theme
+p_region_panel <- p_region + panel_theme
+
+# Get legends
+market_legend <- get_legend(p_kiritimati + legend_theme) # any island legend should work
+reef_legend <- get_legend(p_gilbert + legend_theme) # use gilbert legend (line islands legend only has two categories for reef health)
+
+# Arrange panels by row
+row1 <- plot_grid(p_abaiang_panel, 
+                  p_abemama_panel,
+                  p_butaritari_panel,
+                  market_legend,
+                  nrow = 1,
+                  ncol = 4,
+                  rel_widths = c(0.75, 0.68, 1, 0.9))
+row1
+ggsave(filename = file.path(outdir, "map_figure-X_row1.png"), width = 8.5, height = 11)
+
+row2 <- plot_grid(p_kiritimati_panel,
+                  p_n_tabiteuea_panel, 
+                  p_n_tarawa_panel,
+                  p_onotoa_panel,
+                  nrow = 1,
+                  ncol = 4)
+row2
+ggsave(filename = file.path(outdir, "map_figure-X_row2.png"), width = 8.5, height = 11)
+
+row3 <- plot_grid(p_s_tabiteuea_panel, 
+                  p_s_tarawa_panel,
+                  p_tabuaeran_panel,
+                  nrow = 1,
+                  ncol = 3,
+                  rel_widths = c(0.45, 1, 0.56))
+row3
+ggsave(filename = file.path(outdir, "map_figure-X_row3.png"), width = 8.5, height = 11)
+
+# FIX IT - works as a single panel but now when including as part of row4
+# p_legend_inset <- plot_grid(reef_legend,
+#                             p_region_panel + theme(plot.margin = unit(c(-4, 0, 0, 6.5), "cm")),
+#                             nrow = 2,
+#                             ncol = 1, 
+#                             rel_heights = c(1, 0.6),
+#                             greedy = FALSE)
+# ggsave(filename = file.path(outdir, "map_figure-X_row4-legend-inset.png"))
+
+row4 <- plot_grid(p_region + theme(plot.margin = unit(c(0, 0, 0, 0), "cm")),
+                  p_gilbert_panel + theme(plot.margin = unit(c(0, 0, 0, 0), "cm")),
+                  p_line_panel + theme(plot.margin = unit(c(0, -1.2, 0, 0), "cm")),
+                  reef_legend,
+                  nrow = 1,
+                  ncol = 4,
+                  rel_widths = c(1, 1, 0.65, 1),
+                  align = "hv", axis = "tl")
+row4
+ggsave(filename = file.path(outdir, "map_figure-X_row4.png"), width = 8.5, height = 11)
+
+# Combine rows together
+# REMINDER: first adjust rel_widths or rel_heightss
+# then adjust plot margins of each row; adjust rows one at a time starting from row 1
+plot_grid(row1 + theme(plot.margin = unit(c(0, 0, -4, 0), "cm")), 
+          row2, 
+          row3 + theme(plot.margin = unit(c(-4, 0, 0, 0), "cm")), 
+          row4 + theme(plot.margin = unit(c(-8, 0, 0, 0), "cm")),
+          nrow = 4, 
+          ncol = 1)
+#align = 'v', axis = 'lr')
+ggsave(filename = file.path(outdir, "map_figure-X.png"), width = 8.5, height = 11)
 
 ######################################################################################################
+# Version 2: Line and Gilbert Islands as separate figures
+
+legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
+                      legend.box.margin = margin(0, 0, 0, 0), 
+                      legend.text = element_text(size = 7), 
+                      legend.title = element_text(size = 7))
+
 # Line Islands Figure
 p_kirimati_panel <- p_kiritimati + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
 p_tabuaeran_panel <- p_tabuaeran + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
@@ -526,13 +635,8 @@ p_line_panel <- p_line + theme(legend.position = "none", plot.margin = unit(c(0,
 p_region_line_panel <- p_region_line + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
 line_market_legend <- get_legend(p_kiritimati + legend_theme)
 line_reef_legend <- get_legend(p_line + legend_theme)
-# line_full_legend <- plot_grid(line_reef_legend, line_market_legend, 
-#                               ncol = 1, 
-#                               nrow = 2, 
-#                               align = 'vh',
-#                               rel_heights = c(1, 0.5))
 
-# Working code:
+# Arrange panels by row
 line_top_row <- plot_grid(p_kirimati_panel, 
                           p_tabuaeran_panel,
                           line_market_legend,
@@ -541,7 +645,6 @@ line_top_row <- plot_grid(p_kirimati_panel,
                           rel_widths = c(0.85, 1, 0.3))
 line_top_row
 ggsave(filename = file.path(outdir, "map_figure-X_line-islands-row1.png"), width = 11, height = 8.5)
-
 
 line_bottom_row <- plot_grid(p_region_line_panel,
                              p_line_panel,
@@ -553,6 +656,7 @@ line_bottom_row <- plot_grid(p_region_line_panel,
 line_bottom_row
 ggsave(filename = file.path(outdir, "map_figure-X_line-islands-row2.png"), width = 11, height = 8.5)
 
+# Put together in single figure
 plot_grid(line_top_row, 
           line_bottom_row + theme(plot.margin = unit(c(-3, 0, 0, 0), "cm")),
           nrow = 2,
