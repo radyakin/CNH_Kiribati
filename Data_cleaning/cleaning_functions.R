@@ -26,6 +26,7 @@ tidy_data <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no =
   
   not_all_na <- function(x) any(!is.na(x))
   
+  # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
   if (question_no == TRUE){
     # Make tidy
     df_tidy <- df %>%

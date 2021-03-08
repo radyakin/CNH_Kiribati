@@ -6,6 +6,10 @@ output: pdf_document
 ---
 
 ```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
+
+### NOTE: only use this RMD file to create archipelago-wide plots (not grouped by island)
+### NOTE: to create plots grouped by island, use the "per_island" RMD file
+
 knitr::opts_chunk$set(echo = FALSE)
 library(haven)
 library(tidyverse)
@@ -13,13 +17,12 @@ library(magrittr)
 library(ggplot2)
 
 #___________________________________________________________________________________________#
-# Read in tidy data files
-# ___________________________________________________________________________________________#
+# Read in Tidy data files
+#___________________________________________________________________________________________#
 # Note: datadir and outdir are the same now that data cleaning is done separately in clean_vrs and clean_market.R 
 datadir <- "/Volumes/jgephart/Kiribati/Outputs"
 outdir <- "/Volumes/jgephart/Kiribati/Outputs"
-
-source("R_scripts/plotting_functions.R")
+source("Data_cleaning/plotting_functions.R")
 
 # VRS Data:
 vrsTidy <- read.csv(file.path(datadir, "vrsTidy.csv"))
@@ -38,7 +41,7 @@ marketSurveyTidy <- read.csv(file.path(datadir, "marketSurveyTidy.csv"))
 ## VRS Data
 ### *Multi-response questions*
 
-```{r, warning=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, warning=FALSE, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -49,24 +52,24 @@ plotDF_multiselect <- vrsTidy %>%
   filter(!is.na(option)) %>%
   filter(response == "1")
 
-plot_multi_response(plotDF_multiselect, incl_island = TRUE)
+plot_multi_response(plotDF_multiselect)
 
 ```
 
 ## VRS continued...
 ### *Single response questions*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 # Plot histogram for each single response question while removing zeroes
 
 # List short-answer, fill-in response questions here:
 fill_in_questions <- vrsTidy %>%
-  filter(str_detect(question, pattern = "Other") & question != "Other meeting restrictions") %>% 
+  filter(str_detect(question, pattern = "Other")) %>% 
   pull(question) %>% 
   unique()
 
 # Additional fill-in response questions:
-fill_in_questions <- c(fill_in_questions, "Gender attending meeting", "New village rules")
+fill_in_questions <- c(fill_in_questions, "Gender attending meeting", "Type of work the looking for", "New village rules")
 
 # FIX IT - confirm: assuming zero is different from "blank" (plotting function reports number of zeroes removed)
 plotDF_single <- vrsTidy %>%
@@ -76,14 +79,13 @@ plotDF_single <- vrsTidy %>%
   filter(question %in% c("VRS Village", "Household ID", "Start Time and Date for VRS section", "End Time and Date for VRS section",
                          "Errors count in the interview", "Status of the interview")==FALSE) # FIX IT - confirm: remove these too?
 
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
-
+plot_single_response(plotDF_single, bin_n = 20)
+  
 ```
 
 ## Event Roster Data: List of events
 
 ```{r, warning=FALSE}
-
 event_subsets <- eventRosterTidy %>%
   select(event_roster__id) %>%
   unique()
@@ -94,8 +96,7 @@ event_subsets
 
 ## *Event: Coral bleaching*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -105,14 +106,14 @@ plotDF_single <- eventRosterTidy %>%
   filter(event_roster__id == "Coral bleaching event")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20,incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
+
 ## *Event: Cyclone*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -122,14 +123,13 @@ plotDF_single <- eventRosterTidy %>%
   filter(event_roster__id == "Cyclone")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Event: Harmful algal bloom*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -139,14 +139,13 @@ plotDF_single <- eventRosterTidy %>%
   filter(event_roster__id == "Harmful algal bloom")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Event: Tsunami*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -156,7 +155,7 @@ plotDF_single <- eventRosterTidy %>%
   filter(event_roster__id == "Tsunami")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
@@ -169,11 +168,9 @@ event_subsets <- fishassetRosterTidy %>%
 
 event_subsets
 ```
-
 ### *Asset: Fibreglass boats*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -183,13 +180,12 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Fibreglass boats")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 ## *Asset: Outboard Motors*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -199,14 +195,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Outboard Motors")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Fishing Nets (gillnet)*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -216,14 +211,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Fishing Nets (gillnet)")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Spearguns*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -233,13 +227,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Spearguns")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Fishing Lines*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -250,13 +244,12 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Fishing Lines")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 ```
 
 ## *Asset: Active Fish Traps*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -265,13 +258,12 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Active Fish Traps")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 ```
 
 ## *Asset: Underwater flashlights*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -281,13 +273,12 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Underwater flashlights")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 ```
 
 ## *Asset: Wood canoes*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -297,14 +288,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Wood canoes")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Eskies/portable coolers*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -314,14 +304,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Eskies/portable coolers")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: SCUBA diving equipment*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -331,14 +320,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "SCUBA diving equipment")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Freezers (electric or propane)*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -348,14 +336,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Freezers (electric or propane)")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Ice machines*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -365,14 +352,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Ice machines")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Fishing Nets (purse)*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -382,14 +368,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Fishing Nets (purse)")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Drag Nets*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -399,14 +384,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Drag Nets")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Harpoons/Spears*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -416,14 +400,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Harpoons/Spears")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: FAD (Fish Aggregating Device)*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -433,13 +416,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "FAD (Fish Aggregating Device)")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Other Fishing Equipment (note)*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -450,14 +433,13 @@ plotDF_single <- fishassetRosterTidy %>%
   filter(fish_asset_roster__id == "Other Fishing Equipment (note)")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## Outside Roster Data: List of outside assets
 
 ```{r, warning=FALSE}
-
 #Filter out short answer responses before moving on to plotting data subsets
 short_answers <- c("Other transport mode outside boundary", "Travel time outside boundary")
 outsideRosterTidy <- outsideRosterTidy %>%
@@ -473,7 +455,7 @@ event_subsets
 
 ## *Asset: Clinic/Hospital*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -484,13 +466,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Clinic/Hospital")
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Bank*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -501,13 +483,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Bank") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset:  Nearest Market*
 
-```{r}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -518,13 +500,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Market") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset:  Nearest Post Office*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -535,13 +517,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Post Office") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Credit Facility*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -552,13 +534,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Credit Facility") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Police Station*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -569,13 +551,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Police Station") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Court House*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -586,13 +568,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Court House") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Airport*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -603,14 +585,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Airport") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -620,13 +601,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Trade Store/Supermarket") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest fish landing site*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -637,14 +618,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest fish landing site") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Church*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -654,14 +634,13 @@ plotDF_single <- outsideRosterTidy %>%
   filter(outside_roster__id == "Nearest Church") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## Share Roster Data: List of events
 
 ```{r, warning = FALSE}
-
 # Filter out short answer responses before moving on to plotting data subsets
 shareRosterTidy <- shareRosterTidy %>%
   filter(question %in% short_answers == FALSE)
@@ -671,11 +650,12 @@ event_subsets <- shareRosterTidy %>%
   unique()
 
 event_subsets
+
 ```
 
 ## *Asset: Finfish*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -688,13 +668,13 @@ plotDF_multiple_response <- shareRosterTidy %>%
   filter(response == "1")
 
 # Plot histogram
-plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
+plot_multi_response(plotDF_multiple_response)
+
 ```
 
 ## *Asset: Other non-finfish seafood (shellfish, sea worm, etc.)*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
-
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -702,17 +682,17 @@ plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
 
 plotDF_multiple_response <- shareRosterTidy %>%
   filter(share_roster__id == "Other non-finfish seafood (shellfish, sea worm, etc.)")  %>%
-  filter(is.na(option)==FALSE) %>% # Removes all "shared individually or through institution" question - all blank
+  filter(is.na(option)==FALSE) %>%
   filter(response == "1")
 
 # Plot histogram
-plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
+plot_multi_response(plotDF_multiple_response)
 
 ```
 
 ## *Asset: Non-fish foods*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -721,11 +701,11 @@ plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
 
 plotDF_multiple_response <- shareRosterTidy %>%
   filter(share_roster__id == "Non-fish foods")  %>%
-  filter(is.na(option)==FALSE) %>% # Removes all "shared individually or through institution" question - all blank
+  filter(is.na(option)==FALSE) %>%
   filter(response == "1")
 
 # Plot histogram
-plot_multi_response(plotDF_multiple_response, incl_island = TRUE)
+plot_multi_response(plotDF_multiple_response)
 
 ```
 
@@ -742,11 +722,12 @@ event_subsets <- vrsRosterTidy %>%
   unique()
 
 event_subsets
+
 ```
 
 ## *VRS Roster: 1*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 
 #___________________________________________________________________________________________#
 # Visualize data
@@ -757,20 +738,23 @@ plotDF_single <- vrsRosterTidy %>%
   filter(vrs_roster__id == "1") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
+
 ## *VRS Roster: 2*
-### Note: only contains one individual
+### Note: only contains one individual with the following characteristics
 
 ```{r}
+
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
 # Note: VRS Roster 2 only contains one individual with the following characteristics
 
 #vrsRosterTidy %>% filter(vrs_roster__id==2)
+
 
 ```
 
@@ -794,7 +778,7 @@ event_subsets
 
 ## *Asset: Nearest Church*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -804,13 +788,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest Church") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Trade Store/Supermarket*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -820,13 +804,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest Trade Store/Supermarket") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Airport*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -836,13 +820,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Airport") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Clinic/Hospital*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -852,13 +836,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Clinic/Hospital") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest fish landing site*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -868,13 +852,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest fish landing site") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Credit Facility*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -884,13 +868,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest Credit Facility") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Market*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -900,13 +884,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest Market") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Post Office*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -916,13 +900,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest Post Office") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Nearest Court House*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -932,13 +916,13 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Nearest Court House") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
 ## *Asset: Bank*
 
-```{r, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, fig.height = 8, results = 'asis'}
 #___________________________________________________________________________________________#
 # Visualize data
 #___________________________________________________________________________________________#
@@ -948,17 +932,17 @@ plotDF_single <- withinRosterTidy %>%
   filter(within_roster__id == "Bank") 
 
 # Plot histogram
-plot_single_response(plotDF_single, bin_n = 20, incl_island = TRUE)
+plot_single_response(plotDF_single, bin_n = 20)
 
 ```
 
-### *Market survey*
+### Market survey
 ## Food availability
 
-```{r, warning=FALSE, message=FALSE, fig.height = 8, fig.width = 8,  results = 'asis'}
+```{r, warning = FALSE, message = FALSE, fig.height = 8, results = 'asis'}
 
 # Plot food item availability
-plot.food.availability(marketSurveyTidy, incl_island = TRUE)
+plot.food.availability(marketSurveyTidy)
 
 ```
 
@@ -1011,6 +995,8 @@ market_survey_price <- marketSurveyTidy %>%
   # Now calculate PRICE per UNIT WEIGHT
   mutate(standardized_price = price / weight)
 
-# Plot prices:
-plot.food.prices(market_survey_price, incl_island = TRUE)
+# NOW PLOT:
+plot.food.prices(market_survey_price)
+ 
 ```
+

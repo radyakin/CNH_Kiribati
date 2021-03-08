@@ -1,4 +1,4 @@
-# Clean VRS
+# Clean and output tidy VRS
 
 rm(list=ls())
 library(haven)
@@ -13,7 +13,7 @@ outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 #datadir <- "K:/Kiribati/Data"
 #outdir <- "K:/Kiribati/Outputs"
 
-source("R_scripts/cleaning_functions.R")
+source("Data_cleaning/cleaning_functions.R")
 
 #___________________________________________________________________________________________#
 # Clean VRS data
@@ -28,6 +28,9 @@ var_labels <- clean_data(vrs)[[2]]
 # Change class to character to allow left_join without warning below
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
+
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "vrsTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy
 vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "respondent_names__0", pivot_col_last = "villageGPS__Timestamp", var_labels = var_labels, question_no = FALSE)
@@ -124,6 +127,9 @@ var_labels <- clean_data(eventRoster)[[2]]
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "eventRosterTidy_var-labels.csv"), row.names = FALSE)
+
 # Make tidy
 eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
 
@@ -166,6 +172,9 @@ var_labels <- clean_data(fishassetRoster)[[2]]
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "fishassetRosterTidy_var-labels.csv"), row.names = FALSE)
+
 # Make tidy and output data:
 fishassetRosterTidy <- tidy_data(df = fishassetRoster, pivot_col_1 = "num_assets", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
 write.csv(fishassetRosterTidy, file.path(outdir, "fishassetRosterTidy.csv"), row.names = FALSE)
@@ -194,6 +203,9 @@ var_labels <- clean_data(outsideRoster)[[2]]
 # Change class to character to allow left_join without warning below
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
+
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "outsideRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy and output data:
 outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "village_distance_out", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
@@ -239,6 +251,9 @@ var_labels <- clean_data(shareRoster)[[2]]
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "shareRosterTidy_var-labels.csv"), row.names = FALSE)
+
 # Make tidy
 shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "catch_receiver__1", pivot_col_last = "share_other", var_labels = var_labels, question_no = FALSE)
 
@@ -283,6 +298,9 @@ var_labels <- clean_data(vrsRoster)[[2]]
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "vrsRosterTidy_var-labels.csv"), row.names = FALSE)
+
 # Make tidy and output data
 vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
 
@@ -325,6 +343,9 @@ var_labels <- clean_data(withinRoster)[[2]]
 # Change class to character to allow left_join without warning below
 var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
+
+# Output var_labels (need this to link column names with their labels; col.names is what is listed in the questionnaire)
+write.csv(var_labels, file.path(outdir, "withinRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy
 withinRosterTidy <- tidy_data(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
