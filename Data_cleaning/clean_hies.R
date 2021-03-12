@@ -2,6 +2,9 @@
 # Reminder: keep cleaning and plotting code separate - the code below should only clean and output tidy data,
 # All plotting should be done in the prelim_HIES_review.Rmd file
 
+# QUESTIONS TO EMAIL TO MIKE:
+# What is the zip files within the zip file for? "SPC_KIR_2019_HIES_ASCII_v01.zip"
+
 rm(list=ls())
 library(haven)
 library(tidyverse)
@@ -34,10 +37,10 @@ for (i in 1:length(dta_files)) {
     mutate(col.names = as.character(col.names))
   
   data_cols[[i]] <- paste(names(hies_i_clean), collapse = ", ")
-  
 }
 
 #########################################
+# Create separate folder for data requests
 # Find p922, p922n1, p922n2, p922n3 for Indie's data request:
 lapply(data_cols, str_detect, "p922")
 i = 40
@@ -54,7 +57,7 @@ var_labels <- var_labels %>%
   mutate(col.labels = if_else(col.labels == "p922n1: other hunted animal", true = "p922n3: other hunted animal", false = col.labels))
   
 
-hies_40_tidy <- tidy_data(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = FALSE)
+hies_40_tidy <- pivot_data_long(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = FALSE)
 
 question_labels <- var_labels %>%
   filter(str_detect(col.names, "p922|p922n1|p922n2|p922n3")) %>%
@@ -69,7 +72,7 @@ write.csv(hies_p922, file.path(outdir, "Data-request_IRS_p922.csv"), row.names =
 #########################################
 
 # Make tidy
-fisheriesTidy <- tidy_data(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+fisheriesTidy <- pivot_data_long(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
 
@@ -101,7 +104,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-fisheriesTidy <- tidy_data(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+fisheriesTidy <- pivot_data_long(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
 

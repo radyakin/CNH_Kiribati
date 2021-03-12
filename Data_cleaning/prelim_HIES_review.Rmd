@@ -78,7 +78,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-fisheriesTidy_903 <- tidy_data(df = fisheries_903, pivot_col_1 = "p904", pivot_col_last = "p910", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+fisheriesTidy_903 <- pivot_data_long(df = fisheries_903, pivot_col_1 = "p904", pivot_col_last = "p910", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy_903, file.path(outdir, "fisheriesTidy_903.csv"), row.names = FALSE)
 
@@ -340,7 +340,7 @@ var_labels <- var_labels %>%
   mutate(col.names = as.character(col.names))
 
 # Make tidy
-fisheriesTidy_922 <- tidy_data(df = fisheries_922, pivot_col_1 = "p923", pivot_col_last = "p925", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+fisheriesTidy_922 <- pivot_data_long(df = fisheries_922, pivot_col_1 = "p923", pivot_col_last = "p925", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
 
 write.csv(fisheriesTidy_922, file.path(outdir, "fisheriesTidy_922.csv"), row.names = FALSE)
 

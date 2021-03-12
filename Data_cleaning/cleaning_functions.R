@@ -22,7 +22,7 @@ clean_data <- function(df){
 
 ###################################################################################################
 
-tidy_data <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no = TRUE){
+pivot_data_long <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no = TRUE){
   
   not_all_na <- function(x) any(!is.na(x))
   

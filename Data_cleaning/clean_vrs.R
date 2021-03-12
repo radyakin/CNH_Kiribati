@@ -33,7 +33,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "vrsTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy
-vrsTidy <- tidy_data(df = vrs, pivot_col_1 = "respondent_names__0", pivot_col_last = "villageGPS__Timestamp", var_labels = var_labels, question_no = FALSE)
+vrsTidy <- pivot_data_long(df = vrs, pivot_col_1 = "respondent_names__0", pivot_col_last = "villageGPS__Timestamp", var_labels = var_labels, question_no = FALSE)
 
 # Tidy data output
 write.csv(vrsTidy, file.path(outdir, "vrsTidy.csv"), row.names = FALSE)
@@ -131,7 +131,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "eventRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy
-eventRosterTidy <- tidy_data(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
+eventRosterTidy <- pivot_data_long(df = eventRoster, pivot_col_1 = "event_occurrence", pivot_col_last = "event_nonfinfish", var_labels = var_labels, question_no = FALSE)
 
 # Clean responses for "Time of occurrence of event" should be years
 eventRosterTidy <- eventRosterTidy %>%
@@ -176,7 +176,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "fishassetRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy and output data:
-fishassetRosterTidy <- tidy_data(df = fishassetRoster, pivot_col_1 = "num_assets", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
+fishassetRosterTidy <- pivot_data_long(df = fishassetRoster, pivot_col_1 = "num_assets", pivot_col_last = "num_assets10", var_labels = var_labels, question_no = FALSE)
 write.csv(fishassetRosterTidy, file.path(outdir, "fishassetRosterTidy.csv"), row.names = FALSE)
 
 # Output question list
@@ -208,7 +208,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "outsideRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy and output data:
-outsideRosterTidy <- tidy_data(df = outsideRoster, pivot_col_1 = "village_distance_out", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
+outsideRosterTidy <- pivot_data_long(df = outsideRoster, pivot_col_1 = "village_distance_out", pivot_col_last = "travel_time_out", var_labels = var_labels, question_no = FALSE)
 
 write.csv(outsideRosterTidy, file.path(outdir, "outsideRosterTidy.csv"), row.names = FALSE)
 
@@ -255,7 +255,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "shareRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy
-shareRosterTidy <- tidy_data(df = shareRoster, pivot_col_1 = "catch_receiver__1", pivot_col_last = "share_other", var_labels = var_labels, question_no = FALSE)
+shareRosterTidy <- pivot_data_long(df = shareRoster, pivot_col_1 = "catch_receiver__1", pivot_col_last = "share_other", var_labels = var_labels, question_no = FALSE)
 
 write.csv(shareRosterTidy, file.path(outdir, "shareRosterTidy.csv"), row.names = FALSE)
 
@@ -302,7 +302,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "vrsRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy and output data
-vrsRosterTidy <- tidy_data(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
+vrsRosterTidy <- pivot_data_long(df = vrsRoster, pivot_col_1 = "vrs_sex", pivot_col_last = "live_years", var_labels = var_labels, question_no = FALSE)
 
 write.csv(vrsRosterTidy, file.path(outdir, "vrsRosterTidy.csv"), row.names = FALSE)
 
@@ -348,7 +348,7 @@ var_labels <- var_labels %>%
 write.csv(var_labels, file.path(outdir, "withinRosterTidy_var-labels.csv"), row.names = FALSE)
 
 # Make tidy
-withinRosterTidy <- tidy_data(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
+withinRosterTidy <- pivot_data_long(df = withinRoster, pivot_col_1 = "transport_mode_within", pivot_col_last = "travel_time_within", var_labels = var_labels, question_no = FALSE)
 
 write.csv(withinRosterTidy, file.path(outdir, "withinRosterTidy.csv"), row.names = FALSE)
 
