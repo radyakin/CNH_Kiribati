@@ -23,53 +23,40 @@ source("Data_cleaning/cleaning_functions.R")
 hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
 dta_files <- hies_files[grep(pattern = "\\.dta", hies_files)] # only want the STATA .dta files
 
-# LEFT OFF HERE - are there universal columns to be used as ID columns? and the rest pivot longer to columns: response and question, and if applicable "option" 
+# HIES DATA REQUEST:
+hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
+dta_files <- hies_files[grep(pattern = "\\.dta", hies_files)] # only want the STATA .dta files
+
+
+# get full list of individual HIES data files and each file's data columns and labels
+# Use data_cols, data_labels, etc for fielding data requests
 data_cols <- NULL
-# Just get column names for now:
+data_labels <- NULL
+data_cols_and_labels <- NULL
+data_cols_vector <- NULL
+# Get column names and labels
 for (i in 1:length(dta_files)) {
   hies_i <- read_dta(file.path(datadir, "20210301_HIES_FINAL", dta_files[i]))
-  hies_i_clean <- clean_data(hies_i)[[1]]
+  # hies_i_clean <- clean_data(hies_i)[[1]] # this gets the data frame
   # Extract variable label attributes
-  var_labels <- clean_data(hies_i)[[2]]
+  var_labels <- clean_data(hies_i)[[2]] # this gets the column names and column labels
   
-  # Change class to character to allow left_join without warning below
-  var_labels <- var_labels %>%
-    mutate(col.names = as.character(col.names))
+  data_cols[[i]] <- paste(var_labels$col.names, collapse = ", ") # Just column names
+  data_labels[[i]] <- paste(var_labels$col.labels, collapse = ", ") # Just column labels
+  data_cols_and_labels[[i]] <- var_labels # Get column names and labels
   
-  data_cols[[i]] <- paste(names(hies_i_clean), collapse = ", ")
+  # Pull data cols as a vector to get common ID columns across all data frames
+  data_cols_vector[[i]] <- var_labels %>%
+    pull(col.names)
 }
 
-#########################################
-# Create separate folder for data requests
-# Find p922, p922n1, p922n2, p922n3 for Indie's data request:
-lapply(data_cols, str_detect, "p922")
-i = 40
-hies_i <- read_dta(file.path(datadir, "20210301_HIES_FINAL", dta_files[i]))
-hies_i_clean <- clean_data(hies_i)[[1]]
-
-# Extract variable label attributes
-var_labels <- clean_data(hies_i)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names)) %>%
-  # NOT SURE WHY, but p922n3 was relabelled as p922n1, mutating back to p922n3
-  mutate(col.labels = if_else(col.labels == "p922n1: other hunted animal", true = "p922n3: other hunted animal", false = col.labels))
-  
-
-hies_40_tidy <- pivot_data_long(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = FALSE)
-
-question_labels <- var_labels %>%
-  filter(str_detect(col.names, "p922|p922n1|p922n2|p922n3")) %>%
-  pull(col.labels)
-
-hies_p922 <- hies_40_tidy %>%
-  filter(question %in% c(question_labels, "p922n1", "p922n2", "p922n3")) # Need add these back in because var_labels for these gets split by colon; not sure this is relevant like it was for other datasets
-
-write.csv(hies_p922, file.path(outdir, "Data-request_IRS_p922.csv"), row.names = FALSE)
+# LEFT OFF HERE: Find common data_cols
+# intersect(intersect(data_cols_vector[[1]], data_cols_vector[[2]]), data_cols_vector[[3]])
+# etc etc
 
 
-#########################################
+
+## From market and vrs code - reuse functions?
 
 # Make tidy
 fisheriesTidy <- pivot_data_long(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
