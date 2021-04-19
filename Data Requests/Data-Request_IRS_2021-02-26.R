@@ -1,7 +1,6 @@
 # Indie Reid-Shaw data request
 # Email 2021/02/26
 
-
 rm(list=ls())
 library(haven)
 library(tidyverse)
