@@ -96,7 +96,83 @@ fill_in_the_blank_match <- "p903n"
 var_labels <- var_labels_dat_request
 df <- df_dat_request
 
+# OLD VERSION: only one write-in question
+# Create function for roster data requests:
+# clean_roster_data_request <- function(df, var_labels, data_col_match, roster_match, fill_in_the_blank_match) {
+#   
+#   dat_request_cols <- var_labels %>%
+#     filter(str_detect(col.names, data_col_match)) %>%
+#     pull(col.names) %>%
+#     unique() %>%
+#     sort()
+#   
+#   # Notice p907, p907a, p908, p910 all have version 1 through 11
+#   # This corresponds to question p903: FISHING METHOD
+#   # NEED TO KEEP THIS COLUMN AS ONE OF THE ID COLUMNS 
+#   
+#   roster_cols <- var_labels %>%
+#     filter(str_detect(col.names, roster_match)) %>% # See note below Re: p903
+#     pull(col.names) %>%
+#     unique()
+#   
+#   # Later, need to bring back p903n (this is the fill in the blank respionse for if p903_11 == 1)
+#   id_cols <- c("interview__key",
+#                "fweight",
+#                "division",
+#                "island",
+#                "village",
+#                "rururb",
+#                "hm_basic__id",
+#                "sex",
+#                "age",
+#                roster_cols)
+# 
+#   # ORIGINAL working code for single fill_in_the_blank column  
+#   df_roster <- clean_data(df)[[1]] %>%
+#     select(all_of(c(id_cols, dat_request_cols, fill_in_the_blank_match))) %>% # Bring back column p903n here (fill in the blank for when p903_11 == 1 - i.e., "other fishing method")
+#     # Turn roster_cols into an ID column by pivotting longer and left_joining with var_labels
+#     pivot_longer(cols = all_of(roster_cols), names_to = "roster", values_to = "response") %>%
+#     # Remove response == 0
+#     filter(response == 1) %>%
+#     left_join(var_labels, by = c("roster" = "col.names")) %>%
+#     rename(roster_label = col.labels) %>%
+#     rename(roster_write_in = !!as.symbol(fill_in_the_blank_match)) %>%
+#     select(-response)
+#   
+#   # Use this as an example of why roster info needs to match data request columns
+#   not_all_na <- function(x) any(!is.na(x))
+#   # EXAMPLE: df_roster  %>% filter(interview__key == "01-43-71-19") %>% select_if(not_all_na)
+#   # EXAMPLE: df_roster %>% filter(str_detect(fishing_method, "other"))
+#   
+#   # Now clean data_request columns by pivotting longer and left_joining with var_labels
+#   df_dat_request <- df_roster %>%
+#     pivot_longer(all_of(dat_request_cols), names_to = "question", values_to = "response") %>%
+#     filter(is.na(response) == FALSE) %>%
+#     left_join(var_labels, by = c("question" = "col.names"))
+#   
+#   # EXAMPLE: df_dat_request %>% filter(interview__key == "01-43-71-19")
+#   
+#   # Match data request column to the fishing method column using the roster and question columns
+#   # Example p907__5 corresponds to p903__5, remove all other p907__X
+#   df_match_roster <- df_dat_request %>%
+#     mutate(roster = gsub(x = roster, pattern = ".*__", replacement = "")) %>%
+#     mutate(question = gsub(x = question, pattern = ".*__", replacement = "")) %>%
+#     # Remove non-matches
+#     filter(roster == question)
+#   
+#   # EXAMPLE: df_match_roster %>% filter(interview__key == "01-43-71-19")
+#   
+#   # Final cleaning
+#   df_clean <- df_match_roster %>%
+#     select(-c(roster, question)) %>%
+#     rename(question = col.labels) %>%
+#     arrange(interview__key, hm_basic__id)
+#   
+#   # EXAMPLE: df_clean %>% filter(interview__key == "01-43-71-19")
+#   return(df_clean)
+# }
 
+# New version works with multiple write-in roster questions:
 # Create function for roster data requests:
 clean_roster_data_request <- function(df, var_labels, data_col_match, roster_match, fill_in_the_blank_match) {
   
@@ -105,10 +181,6 @@ clean_roster_data_request <- function(df, var_labels, data_col_match, roster_mat
     pull(col.names) %>%
     unique() %>%
     sort()
-  
-  # Notice p907, p907a, p908, p910 all have version 1 through 11
-  # This corresponds to question p903: FISHING METHOD
-  # NEED TO KEEP THIS COLUMN AS ONE OF THE ID COLUMNS 
   
   roster_cols <- var_labels %>%
     filter(str_detect(col.names, roster_match)) %>% # See note below Re: p903
@@ -126,27 +198,27 @@ clean_roster_data_request <- function(df, var_labels, data_col_match, roster_mat
                "sex",
                "age",
                roster_cols)
-
+  
   # ORIGINAL working code for single fill_in_the_blank column  
   df_roster <- clean_data(df)[[1]] %>%
     select(all_of(c(id_cols, dat_request_cols, fill_in_the_blank_match))) %>% # Bring back column p903n here (fill in the blank for when p903_11 == 1 - i.e., "other fishing method")
     # Turn roster_cols into an ID column by pivotting longer and left_joining with var_labels
-    pivot_longer(cols = roster_cols, names_to = "roster", values_to = "response") %>%
+    pivot_longer(cols = all_of(roster_cols), names_to = "roster", values_to = "response") %>%
     # Remove response == 0
     filter(response == 1) %>%
     left_join(var_labels, by = c("roster" = "col.names")) %>%
     rename(roster_label = col.labels) %>%
-    rename(roster_write_in = !!as.symbol(fill_in_the_blank_match)) %>%
+    unite("roster_write_in", all_of(fill_in_the_blank_match), sep = "") %>%
     select(-response)
   
   # Use this as an example of why roster info needs to match data request columns
-  not_all_na <- function(x) any(!is.na(x))
+  # not_all_na <- function(x) any(!is.na(x))
   # EXAMPLE: df_roster  %>% filter(interview__key == "01-43-71-19") %>% select_if(not_all_na)
   # EXAMPLE: df_roster %>% filter(str_detect(fishing_method, "other"))
   
   # Now clean data_request columns by pivotting longer and left_joining with var_labels
   df_dat_request <- df_roster %>%
-    pivot_longer(dat_request_cols, names_to = "question", values_to = "response") %>%
+    pivot_longer(all_of(dat_request_cols), names_to = "question", values_to = "response") %>%
     filter(is.na(response) == FALSE) %>%
     left_join(var_labels, by = c("question" = "col.names"))
   
@@ -191,9 +263,7 @@ write.csv(p908_dat_request, file.path(outdir, "Data Requests", "2021-04-19_Data-
 write.csv(p909_dat_request, file.path(outdir, "Data Requests", "2021-04-19_Data-request_IRS_p909.csv"), row.names = FALSE)
 write.csv(p910_dat_request, file.path(outdir, "Data Requests", "2021-04-19_Data-request_IRS_p910.csv"), row.names = FALSE)
 
-###### LEFT OFF HERE: 
 # p923 has multiple fill in the blank columns
-# Need to create a separate FILTER based on matching specific fill in the blank question (e.g., p922n1 - what was the other fish) with specific roster question (e.g., p922__6 - "other fish")
 
 # data request columns
 var_labels_dat_request %>%
@@ -207,11 +277,19 @@ var_labels_dat_request %>%
 var_labels_dat_request %>%
   filter(str_detect(col.names, "p922n"))
 
-clean_roster_data_request(df = df_dat_request, var_labels = var_labels_dat_request, data_col_match = "p923", roster_match = "p903_", fill_in_the_blank_match = "p903n")
+# Test function:
+# data_col_match <- "p923"
+# roster_match <- "p922_"
+# fill_in_the_blank_match <- c("p922n1", "p922n2", "p922n3")
+# var_labels <- var_labels_dat_request
+# df <- df_dat_request
+
+p923_dat_request <- clean_roster_data_request(df = df_dat_request, var_labels = var_labels_dat_request, data_col_match = "p923", roster_match = "p922_", fill_in_the_blank_match = c("p922n1", "p922n2", "p922n3"))
+write.csv(p923_dat_request, file.path(outdir, "Data Requests", "2021-04-20_Data-request_IRS_p923.csv"), row.names = FALSE)
 
 
 
-
+# QUESTION FOR MIKE: Where's this data? Continue to next section of Indie's request
 # H1503b. In the last 7 days, how much (unit of quantity) (all for 2 decimal pts) %rostertitle% did your household CONSUME?
 # H1503c. What is the unit of quantity CONSUMED? 
 # Need to investigate further h1503.... no matches for h1503b
@@ -220,7 +298,7 @@ dta_files[unlist(lapply(data_cols, str_detect, "h1503b"))]
 data_cols_and_labels[names(data_cols_and_labels)==dta_files[unlist(lapply(data_cols, str_detect, "h1503"))]]
 
 
-
+# LEFT OFF HERE:
 # MS_FS2. Select all the FISH products that are available today ?
 #   
 # MS_FS3a. How many different units of %rostertitle% are available today? (pounds, ounces)
