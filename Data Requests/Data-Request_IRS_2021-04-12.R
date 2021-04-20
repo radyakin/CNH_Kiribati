@@ -289,7 +289,7 @@ write.csv(p923_dat_request, file.path(outdir, "Data Requests", "2021-04-20_Data-
 
 
 
-# QUESTION FOR MIKE: Where's this data? Continue to next section of Indie's request
+# FIX IT - QUESTION FOR JG/MIKE: Where's this data? Continue to next section of Indie's request
 # H1503b. In the last 7 days, how much (unit of quantity) (all for 2 decimal pts) %rostertitle% did your household CONSUME?
 # H1503c. What is the unit of quantity CONSUMED? 
 # Need to investigate further h1503.... no matches for h1503b
@@ -298,23 +298,44 @@ dta_files[unlist(lapply(data_cols, str_detect, "h1503b"))]
 data_cols_and_labels[names(data_cols_and_labels)==dta_files[unlist(lapply(data_cols, str_detect, "h1503"))]]
 
 
-# LEFT OFF HERE:
+# MARKET SURVEY DATA REQUEST:   
 # MS_FS2. Select all the FISH products that are available today ?
-#   
 # MS_FS3a. How many different units of %rostertitle% are available today? (pounds, ounces)
-# 
 # MS_FS3b. How often is the %rostertitle% available? (single select)
-# 
-# 
 # MS_FS5. Record the weight (number) for a%rostertitle%?
-#   
 # MS_FS6. Record the unit for a %rostertitle%? (lbs/kgs)
-# 
-# VRS4_10.
-# Overall, compared to 10 years ago, has the level of fish stock in your sea/lagoon .....?
-# 
-# VRS4_12.
-# Overall, compared to 10 years ago, has consumption of fish and seafoods......?
-#   
-# VRS4_13.
-# Overall, compared to 10 years ago, has the physical condition of your sea/lagoon...?
+
+# Market Data:
+# MacOS
+datadir <- "/Volumes/jgephart/Kiribati/Data"
+outdir <- "/Volumes/jgephart/Kiribati/Outputs"
+marketSurveyTidy <- read.csv(file.path(outdir, "marketSurveyTidy.csv"))
+# Already cleaned: just send marketSurveyTidy.csv to Indie
+
+# VRS Data:
+# VRS4_10.Overall, compared to 10 years ago, has the level of fish stock in your sea/lagoon .....?
+# VRS4_12.Overall, compared to 10 years ago, has consumption of fish and seafoods......?
+# VRS4_13.Overall, compared to 10 years ago, has the physical condition of your sea/lagoon...?
+vrsTidy <- read.csv(file.path(outdir, "vrsTidy.csv"))
+
+
+# Based on matching column names with corresponding column labels, IRS needs:
+#"Level of fish stock"
+#"Consumption of ocean foods"
+#"Physical condition of sea"
+
+vrs4_10 <- vrsTidy %>%
+  filter(question == "Level of fish stock") %>%
+  select(-option)
+
+vrs4_12 <- vrsTidy %>%
+  filter(question == "Consumption of ocean foods") %>%
+  select(-option)
+
+vrs4_13 <- vrsTidy %>%
+  filter(question == "Physical condition of sea") %>%
+  select(-option)
+
+write.csv(vrs4_10, file.path(outdir, "Data Requests", "2021-04-20_Data-request_IRS_vrs4-10.csv"), row.names = FALSE)
+write.csv(vrs4_12, file.path(outdir, "Data Requests", "2021-04-20_Data-request_IRS_vrs4-12.csv"), row.names = FALSE)
+write.csv(vrs4_13, file.path(outdir, "Data Requests", "2021-04-20_Data-request_IRS_vrs4-13.csv"), row.names = FALSE)
