@@ -23,11 +23,6 @@ source("Data_cleaning/cleaning_functions.R")
 hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
 dta_files <- hies_files[grep(pattern = "\\.dta", hies_files)] # only want the STATA .dta files
 
-# HIES DATA REQUEST:
-hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
-dta_files <- hies_files[grep(pattern = "\\.dta", hies_files)] # only want the STATA .dta files
-
-
 # get full list of individual HIES data files and each file's data columns and labels
 # Use data_cols, data_labels, etc for fielding data requests
 data_cols <- NULL
@@ -50,88 +45,53 @@ for (i in 1:length(dta_files)) {
     pull(col.names)
 }
 
-# LEFT OFF HERE: Find common data_cols
-# intersect(intersect(data_cols_vector[[1]], data_cols_vector[[2]]), data_cols_vector[[3]])
-# etc etc
+# Find common data_cols to bind all data frames
+# Intersection of common data cols for first three data files
+id_cols <- intersect(intersect(data_cols_vector[[1]], data_cols_vector[[2]]), data_cols_vector[[3]])
 
+# Confirm id_cols are in all data files
+lapply(data_cols_vector, FUN = intersect, id_cols)
 
+# Original IRS data request
+# hies_40 <- read_dta(file.path(datadir, "20210301_HIES_FINAL", dta_files[unlist(lapply(data_cols, str_detect, "p907"))]))
+# Current output format of read_dta (hies_40) WILL write out to a CSV but only the value (not the label) e.g., 1, 2, 3, 4, etc but not the corresponding text label S Tarawa, Northern, Central, Southern, etc.
 
-## From market and vrs code - reuse functions?
+# Pivot long based on id_cols
+# hies_40_long <- hies_40 %>%
+#   mutate(across(where(is.numeric), as.character)) %>% # Mutate all columns to be character so all questions (numeric or character) can be combined into a single long pivot column
+#   pivot_longer(cols = !all_of(c(id_cols)), names_to = "question_id") %>% 
+#   filter(is.na(value)==FALSE) # Remove questions with NA responses
 
-# Make tidy
-fisheriesTidy <- pivot_data_long(df = hies_i_clean, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
+# lpply read_dta 
+hies_all <- lapply(dta_files, function(i){read_dta(file.path(datadir, "20210301_HIES_FINAL", i))})
 
-write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
+# FUNCTION: Pivot long based on id_cols
+pivot_hies_i <- function(hies_i, id_cols){
+  hies_i_long <- hies_i %>%
+  mutate(across(where(is.numeric), as.character)) %>% # Mutate all columns to be character so all questions (numeric or character) can be combined into a single long pivot column
+  pivot_longer(cols = !all_of(c(id_cols)), names_to = "question_id") %>% 
+  filter(is.na(value)==FALSE) # Remove questions with NA responses}
+}
 
-# Output QUESTION list:
-#write.csv(unique(fisheriesTidy$question), file.path(outdir, "fisheries_question_list.csv"), row.names = FALSE)
+# lapply pivot function to all hies_all
+hies_long_list <- lapply(hies_all, function(i){pivot_hies_i(hies_i = i, id_cols = id_cols)})
 
+hies_tidy <- bind_rows(hies_long_list, .id = "dta_file") # Column dta_file corresponds to filename in dta_files   
 
+# lapply function get_var_labels to get corresponding col.names and col.labels
+hies_labels_list <- lapply(hies_all, get_var_labels)
+hies_labels <- bind_rows(hies_labels_list)
+hies_labels <- unique(hies_labels) 
 
+# NEXT: check that all non-ID columns are unique
+# interview__key is one of the id_cols but these aren't consistently labelled; See: hies_labels %>% filter(col.names == "interview__key")
+# Just keep names of id_cols as is, don't replace with col.labels since these are inconsistent
 
+# NEXT STEPS:
+# Join labels with hies_tidy
+# Test hies_tidy with IRS last roster request
 
-
-## FROM OTHER CODE:
-## Fisheries data
-### *Note: no island information in current dataset
-# FIX IT - if island information becomes available for fisheries data, will also need to incorporate p903r and p922.dta files (in Fisheries data folder): just copy code from prelim_survey_review.Rmd
-
-#___________________________________________________________________________________________#
-# Clean fisheries data
-#___________________________________________________________________________________________#
-fisheries <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "Fisheries.dta"))
-
-fisheries <- clean_data(fisheries)[[1]]
-
-# Extract variable label attributes
-var_labels <- clean_data(fisheries)[[2]]
-
-# Change class to character to allow left_join without warning below
-var_labels <- var_labels %>%
-  mutate(col.names = as.character(col.names))
-
-# Make tidy
-fisheriesTidy <- pivot_data_long(df = fisheries, pivot_col_1 = "sex", pivot_col_last = "p922n3", var_labels = var_labels, question_no = TRUE) # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
-
-write.csv(fisheriesTidy, file.path(outdir, "fisheriesTidy.csv"), row.names = FALSE)
-
-# Output QUESTION list:
-write.csv(unique(fisheriesTidy$question), file.path(outdir, "fisheries_question_list.csv"), row.names = FALSE)
-
-
-#___________________________________________________________________________________________#
-# Visualize fisheries data
-#___________________________________________________________________________________________#
-# Bar graphs and Histograms of single/multi-select questions
-
-# Plot bar graph for each multi-select question
-plotDF_multiselect <- fisheriesTidy %>%
-  filter(!is.na(option)) %>%
-  filter(response == "1")
-
-plot_multi_response(plotDF_multiselect)
-
-## Fisheries continued...
-### *Single response questions*
-
-
-# List short-answer, fill-in response questions here:
-fill_in_questions <- c("p903n", "p921n", "p922n1", "p922n2")
-
-# Plot histogram for each single response question while removing zeroes
-plotDF_single <- fisheriesTidy %>%
-  filter(is.na(option)) %>%
-  filter(question.no %in% fill_in_questions == FALSE) # remove "other" responses
-
-plot_single_response(plotDF_single, bin_n = 20)
-
-
-# Output short answer responses for translation
-other_answers <- fisheriesTidy %>% 
-  filter(question.no %in% fill_in_questions) %>%
-  filter(response != "") %>% 
-  unique() %>%
-  arrange(question)
-
-write.csv(other_answers, file.path(outdir, "fisheries_other_answers.csv"), row.names = FALSE)
-
+# Outputs:
+# hies_tidy - all dataframes in list dta_file, pivot long (tidy format) and combined
+# dta_file - list of dta_files that correspond to column dta_file number in hies_tidy
+#
