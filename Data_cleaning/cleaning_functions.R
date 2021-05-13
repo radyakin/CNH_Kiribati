@@ -21,6 +21,24 @@ clean_data <- function(df){
 
 
 ###################################################################################################
+# modified clean_data
+
+get_var_labels <- function(df){
+  var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
+  
+  for(i in 1:length(colnames(df))){
+    if(length(attributes(df[[i]])$label) == 1){
+      var_labels$col.labels[i] <- attributes(df[[i]])$label
+    }else{
+      var_labels$col.labels[i] <- var_labels$col.names[i]
+    }
+  }
+  
+  return(var_labels)
+}
+
+
+###################################################################################################
 
 pivot_data_long <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no = TRUE){
   
