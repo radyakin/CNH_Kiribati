@@ -49,9 +49,9 @@ id_cols <- c(id_cols, "hm_basic__id", "interview__id", "hhld_id", "team_id", "in
 #   pivot_longer(cols = !all_of(c(id_cols)), names_to = "question_id") %>% 
 #   filter(is.na(value)==FALSE) # Remove questions with NA responses
 
-
+# Pivot long with pivot_dat_i
 # lapply pivot function to all hies_all
-hies_long_list <- lapply(hies_all, function(i){pivot_hies_i(hies_i = i, id_cols = id_cols)})
+hies_long_list <- lapply(hies_all, function(i){pivot_dat_i(hies_i = i, id_cols = id_cols)})
 
 # Column dta_file corresponds to filename in dta_files; keep this column until we're sure all col.names and col.labels are standardized (see code in manual cleaning section below)
 hies_long <- bind_rows(hies_long_list, .id = "dta_file") 
@@ -221,11 +221,13 @@ hies_fill_in_the_blank <- hies_long_distinct %>%
   unique() %>%
   arrange(value)
   
+# FIX IT - move to top once finalized
 # Outputs:
 # Final long format of all uniquely identified questions: hies_unique_qs - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files), remove qs_with_non_unique_ids
 # Final long format of all NON-uniquely identified questions: hies_non_unique_qs
 # Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
-# Key for matching col.names (question_id in hies) to col.labels (hies_labels_distinct)
+# Key for matching col.names (question_id in hies) to col.labels: hies_labels_distinct
+# Short answers for translation: hies_fill_in_the_blank
 
 
 write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
@@ -235,12 +237,8 @@ write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-leve
 write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
 write.csv(hies_fill_in_the_blank, file = file.path(outdir, "hies_fill-in-the-blanks-for-translation.csv"), row.names = FALSE)
 
-# Test IRS request on this:
+# LEFT OFF HERE: Test IRS request on these files
 
-
-
-
-# FIX IT - alternatively, instead of filtering out all qs-with-non-unique-ids, remove just the specific INSTANCES where these are non-unique?
 
 
 ########################

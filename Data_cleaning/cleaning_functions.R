@@ -24,7 +24,7 @@ get_var_labels <- function(df){
 ###################################################################################################
 # Simple function to pivot long based on id_cols
 
-pivot_hies_i <- function(hies_i, id_cols){
+pivot_dat_i <- function(hies_i, id_cols){
   hies_i_long <- hies_i %>%
     mutate(across(where(is.numeric), as.character)) %>% # Mutate all columns to be character so all questions (numeric or character) can be combined into a single long pivot column
     pivot_longer(cols = !any_of(c(id_cols)), names_to = "question_id") %>% 
