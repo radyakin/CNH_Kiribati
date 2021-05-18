@@ -215,9 +215,10 @@ hies_individ_tidy <- hies_unique_qs %>%
 
 # SHORT ANSWERS FOR TRANSLATION:
 # Join with hies_labels_distinct for question context (helpful for translation)
-hies_fill_in_the_blank <- hies_long_distinct %>%
+hies_alpha <- hies_long_distinct %>%
   filter(str_detect(value, pattern = "[:alpha:]")) %>%
   left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
+  select(question_id, value, col.labels) %>%
   unique() %>%
   arrange(value)
   
@@ -227,7 +228,7 @@ hies_fill_in_the_blank <- hies_long_distinct %>%
 # Final long format of all NON-uniquely identified questions: hies_non_unique_qs
 # Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
 # Key for matching col.names (question_id in hies) to col.labels: hies_labels_distinct
-# Short answers for translation: hies_fill_in_the_blank
+# "Alpha" responses for translation: hies_fill_in_the_blank
 
 
 write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
@@ -235,7 +236,7 @@ write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-un
 write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
 write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
 write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
-write.csv(hies_fill_in_the_blank, file = file.path(outdir, "hies_fill-in-the-blanks-for-translation.csv"), row.names = FALSE)
+write.csv(hies_alpha, file = file.path(outdir, "hies_alpha-responses-for-translation.csv"), row.names = FALSE)
 
 # LEFT OFF HERE: Test IRS request on these files
 
