@@ -1,6 +1,39 @@
 # Cleaning Functions
 
+###################################################################################################
+# FUNCTIONS USED IN clean_hies.R
+###################################################################################################
 
+# function to get col.names and col.labels
+# modified from function clean_data
+
+get_var_labels <- function(df){
+  var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
+  
+  for(i in 1:length(colnames(df))){
+    if(length(attributes(df[[i]])$label) == 1){
+      var_labels$col.labels[i] <- attributes(df[[i]])$label
+    }else{
+      var_labels$col.labels[i] <- var_labels$col.names[i]
+    }
+  }
+  
+  return(var_labels)
+}
+
+###################################################################################################
+# Simple function to pivot long based on id_cols
+
+pivot_hies_i <- function(hies_i, id_cols){
+  hies_i_long <- hies_i %>%
+    mutate(across(where(is.numeric), as.character)) %>% # Mutate all columns to be character so all questions (numeric or character) can be combined into a single long pivot column
+    pivot_longer(cols = !any_of(c(id_cols)), names_to = "question_id") %>% 
+    filter(is.na(value)==FALSE) %>% # Remove questions with NA responses
+    filter(value != "") # Remove questions with blank responses
+}
+
+###################################################################################################
+# FUNCTIONS USED IN PRELIMINARY PLOTTING (e.g., prelim_VRS_and_market_survey.Rmd)
 ###################################################################################################
 clean_data <- function(df){
   var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
@@ -19,27 +52,9 @@ clean_data <- function(df){
   return(list(df = df, var_labels = var_labels))
 }
 
-
-###################################################################################################
-# modified clean_data
-
-get_var_labels <- function(df){
-  var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
-  
-  for(i in 1:length(colnames(df))){
-    if(length(attributes(df[[i]])$label) == 1){
-      var_labels$col.labels[i] <- attributes(df[[i]])$label
-    }else{
-      var_labels$col.labels[i] <- var_labels$col.names[i]
-    }
-  }
-  
-  return(var_labels)
-}
-
-
 ###################################################################################################
 
+# Function to pivot long and replace col.names with col.labels
 pivot_data_long <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no = TRUE){
   
   not_all_na <- function(x) any(!is.na(x))
