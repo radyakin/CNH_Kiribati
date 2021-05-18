@@ -1,6 +1,6 @@
 # Clean and output tidy HIES data:
-# Reminder: keep cleaning and plotting code separate - the code below should only clean and output tidy data,
-# All plotting should be done in the prelim_HIES_review.Rmd file
+# Clean, format, and output data as the starting point for all data requests
+# Reminder: keep cleaning and plotting code separate (for plotting, see prelim_VRS_and_market_survey_review.Rmd, etc)
 
 rm(list=ls())
 library(haven)
@@ -213,18 +213,27 @@ hies_individ_tidy <- hies_unique_qs %>%
   pivot_wider(names_from = question_id, values_from = value) %>%
   arrange(interview__key)
 
+# SHORT ANSWERS FOR TRANSLATION:
+# Join with hies_labels_distinct for question context (helpful for translation)
+hies_fill_in_the_blank <- hies_long_distinct %>%
+  filter(str_detect(value, pattern = "[:alpha:]")) %>%
+  left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
+  unique() %>%
+  arrange(value)
+  
 # Outputs:
 # Final long format of all uniquely identified questions: hies_unique_qs - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files), remove qs_with_non_unique_ids
 # Final long format of all NON-uniquely identified questions: hies_non_unique_qs
 # Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
 # Key for matching col.names (question_id in hies) to col.labels (hies_labels_distinct)
 
+
 write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
 write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-unique-ids.csv"), row.names = FALSE)
 write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
 write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
 write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
-
+write.csv(hies_fill_in_the_blank, file = file.path(outdir, "hies_fill-in-the-blanks-for-translation.csv"), row.names = FALSE)
 
 # Test IRS request on this:
 
