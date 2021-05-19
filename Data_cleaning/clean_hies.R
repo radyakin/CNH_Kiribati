@@ -36,8 +36,12 @@ hies_labels <- bind_rows(hies_labels_list, .id = "dta_file") # add .id so that i
 # Intersection of common data cols for first three data files
 id_cols <- intersect(intersect(hies_labels_list[[1]]$col.names, hies_labels_list[[2]]$col.names), hies_labels_list[[3]]$col.names)
 
+# add hm_basic__id - any questions with NA for this is at the household level
+id_cols <- c(id_cols, "hm_basic__id")
+
+# Reminder - Don't add additional columns like below, this creates duplicate rows of NAs for interview__id in downstream tidy format
 # add other columns as ID columns: hm_basic__id, interview__id, hhld_id, team_id, interviewer_id
-id_cols <- c(id_cols, "hm_basic__id", "interview__id", "hhld_id", "team_id", "interviewer_id")
+#id_cols <- c(id_cols, "hm_basic__id", "interview__id", "hhld_id", "team_id", "interviewer_id")
 
 # Original IRS data request
 # hies_40 <- read_dta(file.path(datadir, "20210301_HIES_FINAL", dta_files[unlist(lapply(data_cols, str_detect, "p907"))]))
@@ -137,13 +141,13 @@ hies_labels_distinct <- hies_labels_clean %>%
 
 hies_long_distinct <- hies_long_clean %>%
   select(-dta_file) %>%
-  distinct() # Shrinks from 8,400,000 to 4,600,000 rows
+  distinct() # Shrinks from 8,900,000 to 4,500,000 rows
 
 # Attempt to pivot hies_long_distinct to get tidy format results in non-unique values
 hies_long_distinct %>%
   pivot_wider(names_from = question_id, values_from = value)
-# Suspect these are all the fill in the blank questions, which can have multiple answers by same respondent
-# Use values_fn to identify
+
+# Use values_fn to identify all the responses with non-unique values
 hies_unique_counts <- hies_long_distinct %>%
   pivot_wider(names_from = question_id, values_from = value, values_fn = length) 
 
@@ -230,7 +234,6 @@ hies_alpha <- hies_long_distinct %>%
 # Key for matching col.names (question_id in hies) to col.labels: hies_labels_distinct
 # "Alpha" responses for translation: hies_fill_in_the_blank
 
-
 write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
 write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-unique-ids.csv"), row.names = FALSE)
 write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
@@ -238,31 +241,3 @@ write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-leve
 write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
 write.csv(hies_alpha, file = file.path(outdir, "hies_alpha-responses-for-translation.csv"), row.names = FALSE)
 
-# LEFT OFF HERE: Test IRS request on these files
-
-
-
-########################
-# OLD CODE:
-# Join clean labels to hies_tidy
-hies_tidy_labels <- hies_long %>%
-  left_join(hies_labels_clean, by = c("question_id" = "col.names", "dta_file")) %>%
-  rename(question_label = col.labels)
-
-# NEXT STEPS:
-# Test hies_tidy_labels with IRS last roster request (Example: question P907_)
-# For example, see interview__key = "00-57-18-79"
-hies_tidy_labels %>%
-  filter(str_detect(question_id, "p907_")) %>%
-  arrange(interview__key)
-
-# Needs to be joined with roster contextual question
-# Answer to p9075 and p907_11 (number of hours) corresponds to p903_5 (spearfishing) and p903_11 (other fishing methods)
-hies_tidy_labels %>%
-  filter(str_detect(question_id, "p903_")) %>%
-  arrange(interview__key) %>%
-  print(n = 11)
-
-# Furthermore needs to be joined with fill-in-the-blanks
-hies_tidy_labels %>%
-  filter(str_detect(question_id, "p903n")) 
