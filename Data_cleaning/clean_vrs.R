@@ -32,7 +32,10 @@ vrs_labels <- get_var_labels(vrs_tidy)
 # Assume that fill in the blank responses will be those that have no other matching
 vrs_alpha <- vrs_long %>%
   filter(str_detect(value, pattern = "[:alpha:]")) %>%
+  # Try sort(unique(vrs_alpha$question_id) to figure out which questions to filter
+  filter(question_id %in% c("respondent_names__0", "respondent_names__1", "start_vrs", "villageGPS__Timestamp")) %>%
   select(question_id, value) %>%
+  arrange(question_id) %>%
   unique()
 
 # FIX IT - move to top once finalized
@@ -45,5 +48,5 @@ vrs_alpha <- vrs_long %>%
 write.csv(vrs_long, file = file.path(outdir, "vrs_long.csv"), row.names = FALSE)
 write.csv(vrs_tidy, file = file.path(outdir, "vrs_tidy.csv"), row.names = FALSE)
 write.csv(vrs_labels, file = file.path(outdir, "vrs_question-id-to-label-key.csv"), row.names = FALSE)
-write.csv(vrs_alpha, file = file.path(outdir, "vrs_alpha-responses-for-translation.csv"), row.names = FALSE)
+write.csv(vrs_alpha, file = file.path(outdir, "vrs_text-responses-for-translation.csv"), row.names = FALSE)
 

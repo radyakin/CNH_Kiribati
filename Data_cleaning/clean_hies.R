@@ -220,11 +220,16 @@ hies_individ_tidy <- hies_unique_qs %>%
 # SHORT ANSWERS FOR TRANSLATION:
 # Join with hies_labels_distinct for question context (helpful for translation)
 hies_alpha <- hies_long_distinct %>%
-  filter(str_detect(value, pattern = "[:alpha:]")) %>%
+  filter(str_detect(value, pattern = "[:alpha:]")) %>% # response has text (i.e., alpha) 
+  # "FIND" the word "text" in the HIES survey to get all the question_id's for the fill-in-the-blanks
+  # ...and question_id ends with either an "n", "n1", "n2", "n3", "n4", "e" (e.g., p903n, h1801n2, h1122e) OR contains an "oth"
+  filter((str_detect(question_id, pattern = "n$|n1$|n2$|n3$|n4$|e$") | str_detect(question_id, pattern = "oth") | question_id %in% c("nonfinfish_consump", "travel_time_within"))) %>% 
+  # REMOVE FALSE MATCHES:
+  filter(question_id %in% c("desc_2001e", "description", "ind_desc_main", "occ_desc_main")==FALSE) %>%
   left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
   select(question_id, value, col.labels) %>%
   unique() %>%
-  arrange(value)
+  arrange(question_id)
   
 # FIX IT - move to top once finalized
 # Outputs:
@@ -239,5 +244,5 @@ write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-un
 write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
 write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
 write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
-write.csv(hies_alpha, file = file.path(outdir, "hies_alpha-responses-for-translation.csv"), row.names = FALSE)
+write.csv(hies_alpha, file = file.path(outdir, "hies_text-responses-for-translation.csv"), row.names = FALSE)
 

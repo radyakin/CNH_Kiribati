@@ -89,7 +89,9 @@ market_long <- pivot_dat_i(market_tidy, id_cols = c("interview__key", "interview
 
 market_alpha <- market_long %>% 
   filter(str_detect(value, "[:alpha:]")) %>% 
-  arrange(value) %>%
+  # Try sort(unique(market_alpha$question_id) to figure out which questions to filter
+  filter(question_id %in% c("availability_other", "other_units")) %>%
+  arrange(question_id) %>%
   select(question_id, value) %>%
   unique()
 
@@ -101,5 +103,5 @@ market_alpha <- market_long %>%
 
 write.csv(market_tidy, file.path(outdir, "market_tidy.csv"), row.names=FALSE)
 write.csv(market_long, file.path(outdir, "market_long.csv"), row.names=FALSE)
-write.csv(market_alpha, file.path(outdir, "market_alpha-responses-for-translation.csv"), row.names=FALSE)
+write.csv(market_alpha, file.path(outdir, "market_text-responses-for-translation.csv"), row.names=FALSE)
 
