@@ -137,11 +137,13 @@ non_standard_col_names # EMPTY
 # Now that hies_labels_clean and hies_long_clean are standardized, we can remove dta_file and use distinct() to remove duplicate questions across data files
 hies_labels_distinct <- hies_labels_clean %>%
   select(-dta_file) %>%
-  distinct() 
+  distinct()
 
 hies_long_distinct <- hies_long_clean %>%
   select(-dta_file) %>%
   distinct() # Shrinks from 8,900,000 to 4,500,000 rows
+
+# Keep dta_file as 
 
 # Attempt to pivot hies_long_distinct to get tidy format results in non-unique values
 hies_long_distinct %>%
