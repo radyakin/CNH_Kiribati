@@ -23,7 +23,14 @@ hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
 # Only want the STATA .dta files
 # Some files have v01 and v02 - these are the same datasets but organized differently (v01 - household level and v02 - transaction level?)
 # Keep only v01 for now - household level seems to be how data is organized throughout
-dta_files <- hies_files[grep(pattern = "\\v01.dta", hies_files)] 
+all_dta_files <- hies_files[grep(pattern = "\\v01.dta", hies_files)] 
+
+# Deal with these files separately
+dta_files <- all_dta_files[!grepl(pattern = "AgricVegetables|AgricRootCrop|AgricFruit|IncomeAggreg|ExpenditureAggreg", all_dta_files)]
+dta_files_not_pivoting_tidy <- all_dta_files[grepl(pattern = "AgricVegetables|AgricRootCrop|AgricFruit|IncomeAggreg|ExpenditureAggreg", all_dta_files)]
+
+# for all dta files
+# dta_files <- hies_files[grep(pattern = "\\.dta", hies_files)] 
 
 # lapply read_dta 
 hies_all <- lapply(dta_files, function(i){read_dta(file.path(datadir, "20210301_HIES_FINAL", i))})
@@ -54,6 +61,7 @@ id_cols <- c(id_cols, "hm_basic__id")
 #   pivot_longer(cols = !all_of(c(id_cols)), names_to = "question_id") %>% 
 #   filter(is.na(value)==FALSE) # Remove questions with NA responses
 
+# FIX IT - return pivot_dat_i function to filtering out "" and NA's
 # Pivot long with pivot_dat_i
 # lapply pivot function to all hies_all
 hies_long_list <- lapply(hies_all, function(i){pivot_dat_i(hies_i = i, id_cols = id_cols)})
@@ -112,10 +120,11 @@ hies_labels_clean <- hies_labels %>%
   mutate(col.labels = case_when(col.names == "fweight" ~ "final sample hh weight",
                                 col.names == "hm_basic__id" ~ "id in hm_basic",
                                 col.names == "interview__key" ~ "interview key (identifier in xx-xx-xx-xx format)",
-                                TRUE ~ col.labels)) %>%
-  mutate(col.names = case_when(col.names == "annual_amount_clean" & col.labels == "cleaned annualised expenditure" ~ "annual_amount_clean_expenditure",
-                               col.names == "annual_amount_clean" & col.labels == "cleaned annualised income" ~ "annual_amount_clean_income",
-                               TRUE ~ col.names))
+                                TRUE ~ col.labels)) #%>%
+# FIX IT - delete if dealing with IncomeAggreg and ExpenditureAggreg separately
+  # mutate(col.names = case_when(col.names == "annual_amount_clean" & col.labels == "cleaned annualised expenditure" ~ "annual_amount_clean_expenditure",
+  #                              col.names == "annual_amount_clean" & col.labels == "cleaned annualised income" ~ "annual_amount_clean_income",
+  #                              TRUE ~ col.names))
 
 # Mutate question_id in hies_long to match the changes made in hies_labels_clean col.names
 hies_long_clean <- hies_long %>%
@@ -144,9 +153,77 @@ hies_long_distinct <- hies_long_clean %>%
   select(-dta_file) %>%
   distinct() # Shrinks from 8,900,000 to 4,500,000 rows
 
-# Attempt to pivot hies_long_distinct to get tidy format results in non-unique values
-hies_long_distinct %>%
-  pivot_wider(names_from = question_id, values_from = value)
+# Now deal with dta_files_not_pivoting_tidy separately
+
+agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta"))
+
+# LEFT OFF HERE: go over this with JG
+# If h1901r__id is changed to h1901r__id_0, h1901r__id_1, and h1901r__id_2 and values changed to NA or 1 then this should allow it to pivot wide 
+unique(agric_veg$h1901r__id)
+
+agric_veg_fix <- agric_veg %>% 
+  mutate()
+  
+
+agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta"))
+agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta"))
+expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta"))
+income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta"))
+
+
+lapply(dta_files, function(i){read_dta(file.path(datadir, "20210301_HIES_FINAL", i))})
+
+# lapply function get_var_labels to get corresponding col.names and col.labels
+hies_labels_list <- lapply(hies_all, get_var_labels)
+
+
+
+# FIX IT - before pivotting tidy, deal with AgricVegetables, AgricRootCrop, AgricFruit, IncomeAggreg, and ExpenditureAggreg
+# FINAL TIDY FORMAT (each row is a single observation at the HOUSEHOLD LEVEL):
+hies_house_tidy <- hies_long_distinct %>%
+  filter(is.na(hm_basic__id)) %>%
+  pivot_wider(names_from = question_id, values_from = value) %>%
+  arrange(interview__key)
+
+# FINAL TIDY FORMAT (each row is a single observation at the INDIVIDUAL LEVEL):
+hies_individ_tidy <- hies_long_distinct %>%
+  filter(is.na(hm_basic__id)==FALSE) %>%
+  pivot_wider(names_from = question_id, values_from = value) %>%
+  arrange(interview__key)
+
+# SHORT ANSWERS FOR TRANSLATION:
+# FIRST, create FULL long format
+# Join with hies_labels_distinct for question context (helpful for translation)
+hies_alpha <- hies_long_distinct %>%
+  filter(str_detect(value, pattern = "[:alpha:]")) %>% # response has text (i.e., alpha) 
+  # "FIND" the word "text" in the HIES survey to get all the question_id's for the fill-in-the-blanks
+  # ...and question_id ends with either an "n", "n1", "n2", "n3", "n4", "e" (e.g., p903n, h1801n2, h1122e) OR contains an "oth"
+  filter((str_detect(question_id, pattern = "n$|n1$|n2$|n3$|n4$|e$") | str_detect(question_id, pattern = "oth") | question_id %in% c("nonfinfish_consump", "travel_time_within"))) %>% 
+  # REMOVE FALSE MATCHES:
+  filter(question_id %in% c("desc_2001e", "description", "ind_desc_main", "occ_desc_main")==FALSE) %>%
+  left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
+  select(question_id, value, col.labels) %>%
+  unique() %>%
+  arrange(question_id)
+
+# FIX IT - move to top once finalized
+# Outputs:
+# Final long format of all uniquely identified questions: hies_unique_qs - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files), remove qs_with_non_unique_ids
+# Final long format of all NON-uniquely identified questions: hies_non_unique_qs
+# Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
+# Key for matching col.names (question_id in hies) to col.labels: hies_labels_distinct
+# "Alpha" responses for translation: hies_fill_in_the_blank
+
+write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
+write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-unique-ids.csv"), row.names = FALSE)
+write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
+write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
+write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
+write.csv(hies_alpha, file = file.path(outdir, "hies_text-responses-for-translation.csv"), row.names = FALSE)
+
+
+##############################################################################################################################
+# OLD CODE:
 
 # Use values_fn to identify all the responses with non-unique values
 hies_unique_counts <- hies_long_distinct %>%
@@ -172,20 +249,14 @@ qs_with_non_unique_ids <- hies_test_df %>%
 
 # Explore qs_with_non_unique_ids
 # hies_unique_counts %>%
-#   select(all_of(c(id_cols, qs_with_non_unique_ids))) %>%
-#   select(-hm_basic__id) %>%
 #   select(any_of(c(id_cols, "h1901r__id"))) %>%
-#   filter(is.na(h1901r__id)==FALSE) %>%
-#   arrange(interview__key)
+#   filter(h1901r__id > 1) %>%
+#   arrange(desc(h1901r__id))
 # 
 # hies_long_distinct %>%
-#   filter(question_id == "h1901r__id") %>%
-#   filter(value > 0) %>%
-#   arrange(interview__key)
+#   filter(interview__key == "83-74-86-59" & question_id == "h1901r__id")
 # 
-# hies_long_distinct %>%
-#   filter(question_id == "recall") %>%
-#   arrange(interview__key)
+# hies_all[[19]] %>% filter(interview__key == "83-74-86-59")
 # 
 # # Try binding to col.labels for more context
 # hies_long_distinct %>%
@@ -257,7 +328,7 @@ hies_with_metadata_test_df %>%
   filter(non_unique_count > 0) %>% # Which columns contain one or more non-unique value
   nrow() 
 
-# These are the qs that cannot be uniquely identified for tidy format (one observation per row)
+# These are the qs that still cannot be uniquely identified for tidy format (one observation per row)
 qs_with_non_unique_ids_2 <- hies_with_metadata_test_df %>%
   filter(question_id %in% id_cols == FALSE) %>% # Remove ID cols - these don't have to be unique since they aren't included in pivot wide
   filter(non_unique_count > 0) %>% 
