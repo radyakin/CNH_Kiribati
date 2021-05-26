@@ -30,6 +30,8 @@ pivot_dat_i <- function(hies_i, id_cols){
     pivot_longer(cols = !any_of(c(id_cols)), names_to = "question_id") %>% 
     filter(is.na(value)==FALSE) %>% # Remove questions with NA responses
     filter(value != "") # Remove questions with blank responses
+  
+  return(hies_i_long)
 }
 
 ###################################################################################################
