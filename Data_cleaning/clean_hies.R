@@ -127,10 +127,10 @@ hies_labels_clean <- hies_labels %>%
   #                              TRUE ~ col.names))
 
 # Mutate question_id in hies_long to match the changes made in hies_labels_clean col.names
-hies_long_clean <- hies_long %>%
-  mutate(question_id = case_when(question_id == "annual_amount_clean" & dta_file == "25" ~ "annual_amount_clean_expenditure",
-                                 question_id == "annual_amount_clean" & dta_file == "26" ~ "annual_amount_clean_income",
-                                 TRUE ~ question_id))
+# hies_long_clean <- hies_long %>%
+#   mutate(question_id = case_when(question_id == "annual_amount_clean" & dta_file == "25" ~ "annual_amount_clean_expenditure",
+#                                  question_id == "annual_amount_clean" & dta_file == "26" ~ "annual_amount_clean_income",
+#                                  TRUE ~ question_id))
 
 # Check that all col.names have a unique col.label
 hies_clean_no_dta_file <- hies_labels_clean %>% 
@@ -149,36 +149,10 @@ hies_labels_distinct <- hies_labels_clean %>%
   select(-dta_file) %>%
   distinct() 
 
-hies_long_distinct <- hies_long_clean %>%
+hies_long_distinct <- hies_long %>%
   select(-dta_file) %>%
   distinct() # Shrinks from 8,900,000 to 4,500,000 rows
 
-# Now deal with dta_files_not_pivoting_tidy separately
-
-agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta"))
-
-# LEFT OFF HERE: go over this with JG
-# If h1901r__id is changed to h1901r__id_0, h1901r__id_1, and h1901r__id_2 and values changed to NA or 1 then this should allow it to pivot wide 
-unique(agric_veg$h1901r__id)
-
-agric_veg_fix <- agric_veg %>% 
-  mutate()
-  
-
-agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta"))
-agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta"))
-expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta"))
-income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta"))
-
-
-lapply(dta_files, function(i){read_dta(file.path(datadir, "20210301_HIES_FINAL", i))})
-
-# lapply function get_var_labels to get corresponding col.names and col.labels
-hies_labels_list <- lapply(hies_all, get_var_labels)
-
-
-
-# FIX IT - before pivotting tidy, deal with AgricVegetables, AgricRootCrop, AgricFruit, IncomeAggreg, and ExpenditureAggreg
 # FINAL TIDY FORMAT (each row is a single observation at the HOUSEHOLD LEVEL):
 hies_house_tidy <- hies_long_distinct %>%
   filter(is.na(hm_basic__id)) %>%
@@ -206,20 +180,52 @@ hies_alpha <- hies_long_distinct %>%
   unique() %>%
   arrange(question_id)
 
-# FIX IT - move to top once finalized
-# Outputs:
-# Final long format of all uniquely identified questions: hies_unique_qs - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files), remove qs_with_non_unique_ids
-# Final long format of all NON-uniquely identified questions: hies_non_unique_qs
-# Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
-# Key for matching col.names (question_id in hies) to col.labels: hies_labels_distinct
-# "Alpha" responses for translation: hies_fill_in_the_blank
 
-write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
-write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-unique-ids.csv"), row.names = FALSE)
+# Output each of the files in dta_files_not_pivoting_tidy separately
+agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta"))
+agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta"))
+agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta"))
+expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta"))
+income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta"))
+# NOTE: Already checked, and none of the data in the dta_files_not_pivoting_tidy files require translations (no fill-in-the-blanks)
+
+# get variable labels for each of the files in dta_file_not_pivoting_tidy
+veg_labels <- get_var_labels(agric_veg)
+root_labels <- get_var_labels(agric_root)
+fruit_labels <- get_var_labels(agric_fruit)
+expend_labels <- get_var_labels(expend_agg)
+income_labels <- get_var_labels(income_agg)
+
+# Bind all column names and labels together for final output
+hies_labels_final <- hies_labels_distinct %>%
+  bind_rows(veg_labels) %>%
+  bind_rows(root_labels) %>%
+  bind_rows(fruit_labels) %>%
+  bind_rows(expend_labels) %>%
+  bind_rows(income_labels) %>%
+  distinct() %>%
+  arrange(col.names)
+
+
+# Outputs:
+# Final long format of all uniquely identified questions: hies_long_distinct - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files)
+# Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
+# Key for matching col.names (question_id in hies) to col.labels: hies_labels_final
+# Fill-in-the-blank responses for translation: hies_fill_in_the_blank
+# All "special roster" files that do not pivot to tidy (because questions do not have unique IDs)
+
+write.csv(hies_long_distinct, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
 write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
 write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
-write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
+write.csv(hies_labels_final, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
 write.csv(hies_alpha, file = file.path(outdir, "hies_text-responses-for-translation.csv"), row.names = FALSE)
+
+# Data rosters that do not have unique IDs:
+write.csv(agric_veg, file = file.path(outdir, "special-roster-hies_vegetable-details.csv"), row.names = FALSE)
+write.csv(agric_root, file = file.path(outdir, "special-roster-hies_root-crop-details.csv"), row.names = FALSE)
+write.csv(agric_fruit, file = file.path(outdir, "special-roster-hies_fruit-details.csv"), row.names = FALSE)
+write.csv(expend_agg, file = file.path(outdir, "special-roster-hies_expenditure.csv"), row.names = FALSE)
+write.csv(income_agg, file = file.path(outdir, "special-roster-hies_income.csv"), row.names = FALSE)
 
 
 ##############################################################################################################################

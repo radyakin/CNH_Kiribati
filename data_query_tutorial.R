@@ -1,4 +1,5 @@
 # Start by loading df_tidy or var_labels
+# Change file.path as needed
 df_tidy <- read.csv(file = file.path(outdir, "hies_tidy_individual-level.csv"))
 var_labels <- read.csv(file = file.path(outdir, "hies_question-id-to-label-key.csv"))
 
