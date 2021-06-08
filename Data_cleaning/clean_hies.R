@@ -35,8 +35,11 @@ dta_files_not_pivoting_tidy <- all_dta_files[grepl(pattern = "AgricVegetables|Ag
 # lapply read_dta 
 hies_all <- lapply(dta_files, function(i){read_dta(file.path(datadir, "20210301_HIES_FINAL", i))})
 
-# lapply function get_var_labels to get corresponding col.names and col.labels
-hies_labels_list <- lapply(hies_all, get_var_labels)
+# Clean data (extract attributes)
+hies_all_clean <- lapply(hies_all, clean_data, return = "df")
+
+# Get labels for all column names
+hies_labels_list <- lapply(hies_all, clean_data, return = "var_labels")
 
 hies_labels <- bind_rows(hies_labels_list, .id = "dta_file") # add .id so that if there are common col.names across dta files these can be matched to the specific col.label from that dta file
 
@@ -64,7 +67,7 @@ id_cols <- c(id_cols, "hm_basic__id")
 # FIX IT - return pivot_dat_i function to filtering out "" and NA's
 # Pivot long with pivot_dat_i
 # lapply pivot function to all hies_all
-hies_long_list <- lapply(hies_all, function(i){pivot_dat_i(hies_i = i, id_cols = id_cols)})
+hies_long_list <- lapply(hies_all_clean, function(i){pivot_dat_i(hies_i = i, id_cols = id_cols)})
 
 # Column dta_file corresponds to filename in dta_files; keep this column until we're sure all col.names and col.labels are standardized (see code in manual cleaning section below)
 hies_long <- bind_rows(hies_long_list, .id = "dta_file") 
@@ -121,7 +124,7 @@ hies_labels_clean <- hies_labels %>%
                                 col.names == "hm_basic__id" ~ "id in hm_basic",
                                 col.names == "interview__key" ~ "interview key (identifier in xx-xx-xx-xx format)",
                                 TRUE ~ col.labels)) #%>%
-# FIX IT - delete if dealing with IncomeAggreg and ExpenditureAggreg separately
+# No longer need to clean these columns if dealing with IncomeAggreg and ExpenditureAggreg separately
   # mutate(col.names = case_when(col.names == "annual_amount_clean" & col.labels == "cleaned annualised expenditure" ~ "annual_amount_clean_expenditure",
   #                              col.names == "annual_amount_clean" & col.labels == "cleaned annualised income" ~ "annual_amount_clean_income",
   #                              TRUE ~ col.names))
@@ -181,20 +184,20 @@ hies_alpha <- hies_long_distinct %>%
   arrange(question_id)
 
 
-# Output each of the files in dta_files_not_pivoting_tidy separately
-agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta"))
-agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta"))
-agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta"))
-expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta"))
-income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta"))
+# Output each of the files in dta_files_not_pivoting_tidy separately - extract attributes with clean_data
+agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta")) %>% clean_data(return = "df")
+agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta")) %>% clean_data(return = "df")
+agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta")) %>% clean_data(return = "df")
+expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta")) %>% clean_data(return = "df")
+income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta")) %>% clean_data(return = "df")
 # NOTE: Already checked, and none of the data in the dta_files_not_pivoting_tidy files require translations (no fill-in-the-blanks)
 
 # get variable labels for each of the files in dta_file_not_pivoting_tidy
-veg_labels <- get_var_labels(agric_veg)
-root_labels <- get_var_labels(agric_root)
-fruit_labels <- get_var_labels(agric_fruit)
-expend_labels <- get_var_labels(expend_agg)
-income_labels <- get_var_labels(income_agg)
+veg_labels <- clean_data(agric_veg, return = "var_labels")
+root_labels <- clean_data(agric_root, return = "var_labels")
+fruit_labels <- clean_data(agric_fruit, return = "var_labels")
+expend_labels <- clean_data(expend_agg, return = "var_labels")
+income_labels <- clean_data(income_agg, return = "var_labels")
 
 # Bind all column names and labels together for final output
 hies_labels_final <- hies_labels_distinct %>%

@@ -4,24 +4,6 @@
 # FUNCTIONS USED IN clean_hies.R
 ###################################################################################################
 
-# function to get col.names and col.labels
-# modified from function clean_data
-
-get_var_labels <- function(df){
-  var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
-  
-  for(i in 1:length(colnames(df))){
-    if(length(attributes(df[[i]])$label) == 1){
-      var_labels$col.labels[i] <- attributes(df[[i]])$label
-    }else{
-      var_labels$col.labels[i] <- var_labels$col.names[i]
-    }
-  }
-  
-  return(var_labels)
-}
-
-###################################################################################################
 # Simple function to pivot long based on id_cols
 
 pivot_dat_i <- function(hies_i, id_cols){
@@ -37,7 +19,7 @@ pivot_dat_i <- function(hies_i, id_cols){
 ###################################################################################################
 # FUNCTIONS USED IN PRELIMINARY PLOTTING (e.g., prelim_VRS_and_market_survey.Rmd)
 ###################################################################################################
-clean_data <- function(df){
+clean_data <- function(df, return = "all"){
   var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
   
   for(i in 1:length(colnames(df))){
@@ -51,7 +33,13 @@ clean_data <- function(df){
   df <- df %<>% 
     mutate_if(is.labelled, as_factor)
   
-  return(list(df = df, var_labels = var_labels))
+  if (return == "df"){
+    return(df)
+  }else if(return == "var_labels"){
+    return(var_labels)
+  }else if (return == "all"){
+    return(list(df = df, var_labels = var_labels))
+  }
 }
 
 ###################################################################################################

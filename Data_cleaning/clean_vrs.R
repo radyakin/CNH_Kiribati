@@ -18,7 +18,8 @@ outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 source("Data_cleaning/cleaning_functions.R")
 
 # Looks to be already tidy
-vrs_tidy <- read_dta(file.path(datadir, "20201013_VRS", "KIR_VILLAGE_RESOURCE_SURVEY.dta"))  %>%
+vrs_tidy <- read_dta(file.path(datadir, "20201013_VRS", "KIR_VILLAGE_RESOURCE_SURVEY.dta")) %>%
+  clean_data(return = "df") %>% # extract attributes
   arrange(interview__key)
 
 id_cols <- c("interview__key", "interview__id")
@@ -27,7 +28,8 @@ vrs_long <- pivot_dat_i(vrs_tidy, id_cols = id_cols) %>%
   filter(value != "##N/A##") %>%
   arrange(interview__key)
 
-vrs_labels <- get_var_labels(vrs_tidy)
+# Extract column labels
+vrs_labels <- clean_data(vrs_tidy, return = "var_labels")
 
 # Assume that fill in the blank responses will be those that have no other matching
 vrs_alpha <- vrs_long %>%
@@ -38,7 +40,6 @@ vrs_alpha <- vrs_long %>%
   arrange(question_id) %>%
   unique()
 
-# FIX IT - move to top once finalized
 # Outputs:
 # Final long format of all uniquely identified questions: vrs_long
 # Final tidy format: vrs_tidy
