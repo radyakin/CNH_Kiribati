@@ -1,4 +1,5 @@
 # PLOT MAP FOR CNHS STUDY PROTOCOL
+# Author: Kelvin Gorospe
 
 # First download sf file for Kiribati from https://gadm.org/download_country_v3.html
 rm(list=ls())
