@@ -103,6 +103,11 @@ food_recall <- expend_agg %>%
 # Get list of all possible food descriptions:
 sort(unique(food_recall$description))
 
+# To get specific types of food recall:
+# (1) Filter by specific coicop_class
+unique(food_recall$coicop_class)
+
+# Or (2) Filter by specific responses in the desciprtion column
 list_of_descriptions <- c("Oceanic fish (Tuna, Wahoo, Mahi-mahi, etc.)",
                           "Reef fish (fresh or frozen)",
                           "Lagoon and sandflat fish (fresh or frozen)",
