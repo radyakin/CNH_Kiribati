@@ -173,16 +173,15 @@ hies_individ_tidy <- hies_long_distinct %>%
 # Join with hies_labels_distinct for question context (helpful for translation)
 hies_alpha <- hies_long_distinct %>%
   filter(str_detect(value, pattern = "[:alpha:]")) %>% # response has text (i.e., alpha) 
-  # "FIND" the word "text" in the HIES survey to get all the question_id's for the fill-in-the-blanks
+  # "FIND" the word "text" in the PDF HIES survey to get all the question_id's for the fill-in-the-blanks
   # ...and question_id ends with either an "n", "n1", "n2", "n3", "n4", "e" (e.g., p903n, h1801n2, h1122e) OR contains an "oth"
   filter((str_detect(question_id, pattern = "n$|n1$|n2$|n3$|n4$|e$") | str_detect(question_id, pattern = "oth") | question_id %in% c("nonfinfish_consump", "travel_time_within"))) %>% 
   # REMOVE FALSE MATCHES:
-  filter(question_id %in% c("desc_2001e", "description", "ind_desc_main", "occ_desc_main")==FALSE) %>%
+  filter(question_id %in% c("copra_increase", "copra_motivation", "desc_2001e", "interview_type", "reason_replace", "sitting_at_home")==FALSE) %>%
   left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
   select(question_id, value, col.labels) %>%
   unique() %>%
   arrange(question_id)
-
 
 # Output each of the files in dta_files_not_pivoting_tidy separately - extract attributes with clean_data
 agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta")) %>% clean_data(return = "df")
@@ -191,6 +190,56 @@ agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_
 expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta")) %>% clean_data(return = "df")
 income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta")) %>% clean_data(return = "df")
 # NOTE: Already checked, and none of the data in the dta_files_not_pivoting_tidy files require translations (no fill-in-the-blanks)
+
+# SPC data team have already worked to standardize units in the Expenditure and Income files - remove all non-standard unit columns
+# These columns should be removed as per Mike Sharpe
+non_standard_columns <- c("qty",
+                          "unit",
+                          "raw_amount",
+                          "annual_amount",
+                          "annual_amount_clean",
+                          "rent_act",
+                          "rent_est",
+                          "rent_imp",
+                          "net_rent",
+                          "usevalue_assets2",
+                          "cpi",
+                          "fpi",
+                          "mean_fpi",
+                          "fpi_def",
+                          "amount_def",         
+                          "qty_corrected",
+                          "amount_corrected",
+                          "outlier",
+                          "amount_new",
+                          "kcal_cost",
+                          "kcal_cost_snack",
+                          "kcal_cost_bev",
+                          "raw_amount_est",
+                          "other_unit",
+                          "year_acq",
+                          "nmonth_owned",
+                          "paid_by",
+                          "location",
+                          "num_owned",
+                          "amount_resell",      
+                          "purpose",
+                          "h1201_sale_"
+                          )
+expend_agg <- expend_agg %>%
+  select(!all_of(non_standard_columns))
+income_agg <- income_agg %>%
+  select(!all_of(non_standard_columns))
+
+# Get fill in the blank responses for expenditure and income datasets ("description" column)
+expend_alpha <- expend_agg %>%
+  select(all_of(c("description", "coicop"))) %>%
+  distinct()
+
+income_alpha <- income_agg %>%
+  select(all_of(c("description", "coicop"))) %>%
+  distinct()
+
 
 # get variable labels for each of the files in dta_file_not_pivoting_tidy
 veg_labels <- clean_data(agric_veg, return = "var_labels")
@@ -214,21 +263,27 @@ hies_labels_final <- hies_labels_distinct %>%
 # Final long format of all uniquely identified questions: hies_long_distinct - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files)
 # Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
 # Key for matching col.names (question_id in hies) to col.labels: hies_labels_final
-# Fill-in-the-blank responses for translation: hies_fill_in_the_blank
+# Fill-in-the-blank responses for translation: hies_alpha, expend_alpha, and income_alpha
 # All "special roster" files that do not pivot to tidy (because questions do not have unique IDs)
 
+# Standard HIES dataset
 write.csv(hies_long_distinct, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
 write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
 write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
 write.csv(hies_labels_final, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
 write.csv(hies_alpha, file = file.path(outdir, "hies_text-responses-for-translation.csv"), row.names = FALSE)
 
+# HIES questions related to expenditures and income (pre-processed by SPC data team)
+write.csv(expend_agg, file = file.path(outdir, "hies_expenditures-standard-units.csv"), row.names = FALSE)
+write.csv(expend_alpha, file = file.path(outdir, "hies_expenditures-for-translation.csv"), row.names = FALSE)
+write.csv(income_agg, file = file.path(outdir, "hies_income-standard-units.csv"), row.names = FALSE)
+write.csv(income_alpha, file = file.path(outdir, "hies_income-for-translation.csv"), row.names = FALSE)
+
 # Data rosters that do not have unique IDs:
 write.csv(agric_veg, file = file.path(outdir, "special-roster-hies_vegetable-details.csv"), row.names = FALSE)
 write.csv(agric_root, file = file.path(outdir, "special-roster-hies_root-crop-details.csv"), row.names = FALSE)
 write.csv(agric_fruit, file = file.path(outdir, "special-roster-hies_fruit-details.csv"), row.names = FALSE)
-write.csv(expend_agg, file = file.path(outdir, "special-roster-hies_expenditure.csv"), row.names = FALSE)
-write.csv(income_agg, file = file.path(outdir, "special-roster-hies_income.csv"), row.names = FALSE)
+
 
 
 ##############################################################################################################################
