@@ -30,11 +30,12 @@ village_info <- read.csv(file = file.path(datadir, "data_from_table_1.csv")) %>%
   select(-c(Lat, Lon)) # Original Table 1 lat/longs were incorrect; get this info from Jacob's table instead
 
 # Looks like rnaturalearth package also doesn't have island-level info for Kiribati either
+# Will need to crop each island out of kir_sf manually using island_box below
 # library(rnaturalearth)
 # kir_ne <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = "Kiribati")
 
 # Load Jacob's ecological sites info and join with village_info
-# Also Use Jacob's ecological site info to get bounding box for each island and use this to subset each island
+# Also Use Jacob's ecological site info to approximate a plotting window for each island and use this to crop out each island from the full kir_sf
 eco_info <- read.csv(file = file.path(datadir, "Kiribaiti NSF Coordinates FINAL Eurich_20210218.csv")) %>%
   mutate(Island = if_else(str_detect(Island, "Tabiteuae"), true = str_replace(Island, "Tabiteuae", replacement = "Tabiteuea"), false = Island))
 
@@ -54,13 +55,15 @@ setdiff(village_info$Community.Name, eco_info %>% filter(Description == "Village
 setdiff(eco_info %>%  pull(Island), village_info$Island.Name)
 setdiff(village_info$Island.Name, eco_info %>%  pull(Island))
 
+# Filter out Ciguatera site (not plotting this)
+# Filter out Mantas - clean this separately
 site_info_no_manta <- eco_info %>%
   filter(Island != "") %>% # Remove blank rows
   # NOTE there is one Ciguatera site that was also sampled for Reef Health, but leaving this out for simplicity
   filter(Description %in% c("Ciguatera", "Miscellaneous")==FALSE) %>% # remove misc and ciguatera sites
-  # Filter out mantas and deal with these separately
   filter(Notes != "MT")  # MT = manta tow
 
+# Clean Manta Tow data
 manta_tows_to_points <- eco_info %>%
   filter(Description == "Site" & Notes == "MT") %>%
   mutate(Name_cleaned = str_replace(Name_cleaned, pattern = "a|b", replacement = "")) %>%
@@ -81,6 +84,9 @@ site_info <- site_info_no_manta %>%
 # Create custom buffer for each island - based on trial error of default "0" for buffer
 islands <- sort(unique(site_info$Island))
 
+# Need to create plotting window around each island
+# Strategy is to use the max/min  Lat/Long of the dive sites as a starting point in site_info
+# Then in order to plot the full extent of each island, add additional space to these dive sites as defined by island_buffer below
 island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
   mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.165,
                                island == "Abemama" ~ -0.02,
@@ -133,6 +139,8 @@ market_colors <- brewer.pal(8, "Oranges")[c(4, 6, 8)]
 # Loop through islands and plot
 for (i in 1:length(islands)){
   island_i <- islands[i]
+  
+  # Get the min/max Lat/long dive site for each island
   island_bounds <- site_info %>%
     filter(Island == island_i) %>%
     dplyr::select(Lat, Long) %>% 
@@ -140,17 +148,21 @@ for (i in 1:length(islands)){
               min_lat = min(Lat),
               max_long = max(Long),
               min_long = min(Long))
+ 
+  # Add a buffer around the dive sites to get a custom plotting window for each island
   island_buffer_i <- island_buffer %>%
     filter(island == island_i)
   island_box = c(xmin = island_bounds$min_long + island_buffer_i$xmin_buff, 
                  xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
                  ymin = island_bounds$min_lat + island_buffer_i$ymin_buff, 
                  ymax = island_bounds$max_lat + island_buffer_i$ymax_buff)
-  # Use box to crop island out of kir_sf
+  
+  # Use island_box to crop island out of kir_sf
   #island_crop <- st_crop(st_geometry(kir_sf), box)
   island_crop <- st_crop(kir_sf, island_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
   
-  # Use box to get bathy data, see tutorial: https://cran.r-project.org/web/packages/marmap/vignettes/marmap.pdf
+  # Use same box to get bathy data, see tutorial: https://cran.r-project.org/web/packages/marmap/vignettes/marmap.pdf
+  # Minor adjustments to island_box are necessary depending on the island
   if (island_i == "N Tabiteuea"){
     island_bathy_i <- getNOAA.bathy(lon1 = island_box[[1]], lon2 = island_box[[2]] + 0.1, lat1 = island_box[[3]] - 0.05, lat2 = island_box[[4]], resolution = 1, keep = TRUE, path = datadir) 
   } else if (island_i == "N Tarawa"){
@@ -173,12 +185,11 @@ for (i in 1:length(islands)){
   
   eco_and_quality_sites <- island_dat %>%
     filter(Description == "Site")
-  
 
   #st_as_sf(coords = c("Long", "Lat")) %>%
   #st_set_crs(value = "WGS84") # NOTE: already checked and no difference between projecting points to CRS and using geom_sf vs just using geom_point
   
-  # Easier to plot manta paths with geom_line vs geom_sf so don't project points to CRS
+  # IF plotting manta tows, easier to plot manta paths with geom_line vs geom_sf so don't project points to CRS
   # manta_tows <- island_dat %>%
   #   filter(Description == "Site") %>%
   #   filter(Notes == "Manta Tow") %>%
@@ -257,11 +268,14 @@ for (i in 1:length(islands)){
 #########################################################################################################
 # PLOT Pacific Ocean region showing Gilbert vs Line Islands
 kir_region <- ne_countries(scale = 50, returnclass = "sf", type = "countries", country = c("Kiribati", "Australia", "New Zealand", "Papua New Guinea", "Indonesia", "Solomon Islands", "New Caledonia", "Vanuatu", "Malaysia", "Philippines", "Vietnam", "Cambodia", "Thailand"))
+# Kiribati straddles 180 degrees, so use st_shift_longitude to re-center
 kir_shift <- st_shift_longitude(kir_region)
 
+# Define location of box to be drawn around each archipelago
 line_box <- geom_rect(aes(xmin = 199.5, xmax = 204.5, ymin = 0.75, ymax = 5.25), fill = NA, color = "purple", size = 1)
 gilbert_box <- geom_rect(aes(xmin = 172, xmax = 179.5, ymin = -1.5, ymax = 3.5), fill = NA, color = "purple", size = 1)
 
+# Define location of label for each archipelago
 line_label <- st_point(c(202, 3))
 gilbert_label <- st_point(c(174.5, 0.5))
 labels_sf <- st_as_sf(data.frame(name = c("Gilbert", "Line"),
@@ -269,6 +283,7 @@ labels_sf <- st_as_sf(data.frame(name = c("Gilbert", "Line"),
 st_crs(labels_sf) <- st_crs(kir_shift)
 labels_sf_shift <- st_shift_longitude(labels_sf)
 
+# Plot the regional map with both archipelagos indicated by boxes and labels
 p_region <- ggplot() + 
   #geom_sf(data = kir_region, fill = "NA", colour = "black") +
   geom_sf(data = kir_shift, fill = "NA", colour = "black") +
@@ -284,6 +299,7 @@ p_region <- ggplot() +
 print(p_region)
 #ggsave(filename = file.path(outdir, paste("map_region.png", sep = "")), width = 8, height = 8)
 
+# Alternatively, plot the region with each archipelago highlighted separately:
 p_region_line <- ggplot() + 
   #geom_sf(data = kir_region, fill = "NA", colour = "black") +
   geom_sf(data = kir_shift, fill = "NA", colour = "black") +
@@ -329,19 +345,20 @@ archipel_box = c(xmin = archipel_bounds$min_long + 0,
 # Use box to crop gilbert out of full country map
 gilbert_crop <- st_crop(kir_sf, archipel_box) # Use this because scalebar() and north() prefer a full dataframe, not just the geometry
 
-# Split MULTIPOLYGON into separate POLYGONS
+# Create a layer of islands with a buffer around each island,
+# First, by splitting the MULTIPOLYGON into separate POLYGONS
 gilbert_cast <- gilbert_crop %>%
   st_cast("POLYGON") %>%
   mutate(island_name = "Not sampled")
 
-# Add buffer around all polygons
-# Then group together to join buffers
+# Then add buffer around all polygons and join back together again to form single multipolygon layer
+# Label this as "Not sampled", all sampled polygons will be overlayed with a second layer
 gilbert_buffer <- st_buffer(gilbert_cast, dist = 0.05, joinStyle = "ROUND") %>%
   mutate(island_name = "Not sampled") %>%
   group_by(island_name) %>%
   summarise(n = n())
 
-# Loop through each island, create bounding box from site info, and crop each island out of the gilbert islands
+# Loop through each island, create bounding box from site info, crop, and create column label for each island out of the gilbert islands
 islands_labeled <- NULL
 for (i in 1:length(islands)){
   island_i <- islands[i]
@@ -367,12 +384,13 @@ for (i in 1:length(islands)){
     st_combine() %>%
     st_cast("POLYGON")
   
-  # TRY CROPPING as was done in the island plots above
+  # Crop out each island from within the gilbert islands and label it in the column island_name
   island_crop <- gilbert_crop %>% 
     st_crop(island_polygon) %>%
     mutate(island_name = island_i)
-  ggplot() +
-    geom_sf(data = island_crop)
+  # Check that the correct island was cropped out:
+  # ggplot() +
+  #   geom_sf(data = island_crop)
 
   islands_labeled <- rbind(islands_labeled, island_crop)
  
@@ -380,7 +398,7 @@ for (i in 1:length(islands)){
 # Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
 # Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
 
-# Add buffer around all sampled island polygons and join with reef health data
+# Create second layer of islands with a buffer around each island, but now label with Reef Health information
 sampled_buffer <- st_buffer(islands_labeled, dist = 0.05, joinStyle = "ROUND") %>%
   left_join(village_info %>% select(Island.Name, Rank.Reef.Health) %>% unique(), by = c("island_name" = "Island.Name")) %>%
   mutate(Rank.Reef.Health = if_else(island_name == "Not sampled", true = "Not sampled", false = Rank.Reef.Health)) %>%
@@ -417,8 +435,7 @@ print(p_gilbert)
 
 #########################################################################################################
 #########################################################################################################
-# FIX IT - make this a loop for line and gilbert islands
-# ONLY DIFFERENCE is line islands has two factor levels for reef health (low, medium)
+# Do the same for the Lins islands: ONLY DIFFERENCE is line islands only has two factor levels for reef health (low, medium)
 
 # Repeat for Line Islands
 line_bounds <- site_info %>%
