@@ -11,7 +11,6 @@ library(magrittr)
 # MacOS
 datadir <- "/Volumes/jgephart/Kiribati/Data"
 outdir <- "/Volumes/jgephart/Kiribati/Outputs"
-
 # Windows
 #datadir <- "K:/Kiribati/Data"
 #outdir <- "K:/Kiribati/Outputs"
@@ -266,23 +265,25 @@ hies_labels_final <- hies_labels_distinct %>%
 # Fill-in-the-blank responses for translation: hies_alpha, expend_alpha, and income_alpha
 # All "special roster" files that do not pivot to tidy (because questions do not have unique IDs)
 
+file.date <- Sys.Date() # add file.date to all outputs to keep track of most recent versions
+
 # Standard HIES dataset
-write.csv(hies_long_distinct, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
-write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
-write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
-write.csv(hies_labels_final, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
-write.csv(hies_alpha, file = file.path(outdir, "hies_text-responses-for-translation.csv"), row.names = FALSE)
+write.csv(hies_long_distinct, file = file.path(outdir, paste(file.date, "_hies_long_qs-with-unique-ids.csv", sep = "")), row.names = FALSE)
+write.csv(hies_house_tidy, file = file.path(outdir, paste(file.date, "_hies_tidy_household-level.csv", sep = "")), row.names = FALSE)
+write.csv(hies_individ_tidy, file = file.path(outdir, paste(file.date, "_hies_tidy_individual-level.csv", sep = "")), row.names = FALSE)
+write.csv(hies_labels_final, file = file.path(outdir, paste(file.date, "_hies_question-id-to-label-key.csv", sep = "")), row.names = FALSE)
+write.csv(hies_alpha, file = file.path(outdir, paste(file.date, "_hies_text-responses-for-translation.csv", sep = "")), row.names = FALSE)
 
 # HIES questions related to expenditures and income (pre-processed by SPC data team)
-write.csv(expend_agg, file = file.path(outdir, "hies_expenditures-standard-units.csv"), row.names = FALSE)
-write.csv(expend_alpha, file = file.path(outdir, "hies_expenditures-for-translation.csv"), row.names = FALSE)
-write.csv(income_agg, file = file.path(outdir, "hies_income-standard-units.csv"), row.names = FALSE)
-write.csv(income_alpha, file = file.path(outdir, "hies_income-for-translation.csv"), row.names = FALSE)
+write.csv(expend_agg, file = file.path(outdir, paste(file.date, "_hies_expenditures-standard-units.csv", sep = "")), row.names = FALSE)
+write.csv(expend_alpha, file = file.path(outdir, paste(file.date, "_hies_expenditures-for-translation.csv", sep = "")), row.names = FALSE)
+write.csv(income_agg, file = file.path(outdir, paste(file.date, "_hies_income-standard-units.csv", sep = "")), row.names = FALSE)
+write.csv(income_alpha, file = file.path(outdir, paste(file.date, "_hies_income-for-translation.csv", sep = "")), row.names = FALSE)
 
 # Data rosters that do not have unique IDs:
-write.csv(agric_veg, file = file.path(outdir, "special-roster-hies_vegetable-details.csv"), row.names = FALSE)
-write.csv(agric_root, file = file.path(outdir, "special-roster-hies_root-crop-details.csv"), row.names = FALSE)
-write.csv(agric_fruit, file = file.path(outdir, "special-roster-hies_fruit-details.csv"), row.names = FALSE)
+write.csv(agric_veg, file = file.path(outdir, paste(file.date, "_special-roster-hies_vegetable-details.csv", sep = "")), row.names = FALSE)
+write.csv(agric_root, file = file.path(outdir, paste(file.date, "_special-roster-hies_root-crop-details.csv", sep = "")), row.names = FALSE)
+write.csv(agric_fruit, file = file.path(outdir, paste(file.date, "_special-roster-hies_fruit-details.csv", sep = "")), row.names = FALSE)
 
 
 
