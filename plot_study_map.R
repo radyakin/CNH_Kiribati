@@ -1,7 +1,8 @@
 # PLOT MAP FOR CNHS STUDY PROTOCOL
 # Author: Kelvin Gorospe
+# All input files can be found in Google Drive: Kiribati/Data/Data for Mapping
 
-# First download sf file for Kiribati from https://gadm.org/download_country_v3.html
+
 rm(list=ls())
 library(tidyverse)
 library(sf)
@@ -15,7 +16,7 @@ datadir <- "Data for mapping"
 outdir <- "Outputs"
 
 # Load country polygons
-kir_sf <- readRDS(file = file.path(datadir, "gadm36_KIR_0_sf.rds"))
+kir_sf <- readRDS(file = file.path(datadir, "gadm36_KIR_0_sf.rds")) # sf file for Kiribati from https://gadm.org/download_country_v3.html
 st_geometry(kir_sf)
 # Geographic CRS (coordinate reference system) WGS 84 - World Geodetic System - this is the system used by GPS
 # WGS 84 equal to EPSG code: 4326
@@ -81,12 +82,11 @@ site_info <- site_info_no_manta %>%
                                     TRUE ~ "Other")) %>%
   left_join(village_info, by = c("Name_cleaned" = "Community.Name", "Island" = "Island.Name"))
 
-# Create custom buffer for each island - based on trial error of default "0" for buffer
-islands <- sort(unique(site_info$Island))
-
-# Need to create plotting window around each island
+# Create plotting window around each island
+# Based on trial error of default "0" for buffer
 # Strategy is to use the max/min  Lat/Long of the dive sites as a starting point in site_info
 # Then in order to plot the full extent of each island, add additional space to these dive sites as defined by island_buffer below
+islands <- sort(unique(site_info$Island))
 island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
   mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.165,
                                island == "Abemama" ~ -0.02,
@@ -136,7 +136,7 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
 display.brewer.pal(8, "Oranges")
 market_colors <- brewer.pal(8, "Oranges")[c(4, 6, 8)]
 
-# Loop through islands and assign to individual ggplot objects
+# Loop through islands, plot each island to console, and assign to individual ggplot objects
 for (i in 1:length(islands)){
   island_i <- islands[i]
   
@@ -541,12 +541,10 @@ plot(p_line)
 ######################################################################################################
 # Version 1: Line and Gilbert Islands as a single figure
 
-legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
-                      legend.box.margin = margin(c(0, 0, 0, 0)), 
-                      legend.text = element_text(size = 7), 
-                      legend.title = element_text(size = 7))
+# Default panel theme is no legend and plot margin = 0
 panel_theme <- theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
 
+# Remove legend from all plots
 p_abaiang_panel <- p_abaiang + panel_theme
 p_abemama_panel <- p_abemama + panel_theme
 p_butaritari_panel <- p_butaritari + theme(legend.position = "none", plot.margin = unit(c(0, -0.5, 0, 0), "cm"))
@@ -574,6 +572,10 @@ p_line_panel <- p_line + panel_theme
 p_region_panel <- p_region + panel_theme
 
 # Get legends
+legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
+                      legend.box.margin = margin(c(0, 0, 0, 0)), 
+                      legend.text = element_text(size = 7), 
+                      legend.title = element_text(size = 7))
 market_legend <- get_legend(p_kiritimati + legend_theme) # any island legend should work
 reef_legend <- get_legend(p_gilbert + legend_theme) # use gilbert legend (line islands legend only has two categories for reef health)
 
