@@ -1,7 +1,7 @@
-# PLOT MAP FOR CNHS STUDY PROTOCOL
+# PLOT MAP OF ECOLOGICAL SITES FOR NSF-CNHS STUDY (modified from plot_study_map.R)
 # Author: Kelvin Gorospe
+# All input files can be found in Google Drive: Kiribati/Data/Data for Mapping
 
-# First download sf file for Kiribati from https://gadm.org/download_country_v3.html
 rm(list=ls())
 library(tidyverse)
 library(sf)
@@ -15,7 +15,7 @@ datadir <- "Data for mapping"
 outdir <- "Outputs"
 
 # Load country polygons
-kir_sf <- readRDS(file = file.path(datadir, "gadm36_KIR_0_sf.rds"))
+kir_sf <- readRDS(file = file.path(datadir, "gadm36_KIR_0_sf.rds")) # sf file for Kiribati from https://gadm.org/download_country_v3.html
 st_geometry(kir_sf)
 # Geographic CRS (coordinate reference system) WGS 84 - World Geodetic System - this is the system used by GPS
 # WGS 84 equal to EPSG code: 4326
@@ -59,9 +59,8 @@ manta_tows_to_points <- eco_info %>%
          Long = mean(Long)) %>%
   ungroup()
 
-# Finalize eco dataset: RBIND Manta and non Manta, create plot_eco_label column, filter down to only Gilbert Islands
-# Keep site_info_original separate from site_info so Jacob can decide whether or not to include "Hypothesized Reef Health" index
-site_info_original <- site_info_no_manta %>%
+# RBIND Manta and non Manta, create plot_eco_label column, filter down to only Gilbert Islands
+site_info_split_islands <- site_info_no_manta %>%
   bind_rows(manta_tows_to_points) %>%
   mutate(plot_eco_label = case_when(Description == "Site" & Reef_Quality_Sampling == "No" ~ "Ecology",
                                     Description == "Site" & Reef_Quality_Sampling == "Yes" ~ "Ecology + Water Quality",
@@ -69,20 +68,22 @@ site_info_original <- site_info_no_manta %>%
   filter(Island %in% c("Tabuaeran", "Kiritimati")==FALSE)
 
 # Combine N and S Tarawa and N and S Tab into single islands
-site_info <- site_info_original %>%
+site_info_combined_islands <- site_info_split_islands %>%
+  filter(str_detect(Island, "Tarawa|Tabiteuea")) %>%
   mutate(Island = case_when(str_detect(Island, "Tarawa") ~ "Tarawa",
                             str_detect(Island, "Tabiteuea") ~ "Tabiteuea",
                             TRUE ~ Island)) 
+
+# Rowbind "combined" (Tarawa, Tabiteuea) and split (N/S Tarawa and N/S Tabiteuea) versions
+site_info_all <- site_info_split_islands %>%
+  bind_rows(site_info_combined_islands)
   
-
-# Create custom buffer for each island - based on trial error of default "0" for buffer
-islands <- sort(unique(site_info$Island))
-
-# Note: this is copied from the full Kirimati study protocol code (Line Islands not relevant here)
-# Need to create plotting window around each island
+# Create plotting window around each island (Note: this is copied from the full Kirimati study protocol code (Line Islands not relevant here)
+# Based on trial error of default "0" for buffer
 # Strategy is to use the max/min  Lat/Long of the dive sites as a starting point in site_info
 # Then in order to plot the full extent of each island, add additional space to these dive sites as defined by island_buffer below
-island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
+islands <- sort(unique(c(site_info_all$Island, site_info_split_islands$Island)))
+island_buffer_all <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
   mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.165,
                                island == "Abemama" ~ -0.02,
                                island == "Butaritari" ~ -0.02,
@@ -91,7 +92,7 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "N Tarawa" ~ -0.01,
                                island == "Onotoa" ~ -0.02,
                                island == "S Tabiteuea" ~ -0.01,
-                               island == "S Tarawa" ~ 0,
+                               island == "S Tarawa" ~ -0.01,
                                island == "Tabuaeran" ~ -0.01,
                                island == "Tabiteuea" ~ -0.02,
                                island == "Tarawa" ~ -0.01,
@@ -100,8 +101,8 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "Abemama" ~ 0.02,
                                island == "Butaritari" ~ 0.02,
                                island == "Kiritimati" ~ 0.25, 
-                               island == "N Tabiteuea" ~ 0.13,
-                               island == "N Tarawa" ~ 0.02,
+                               island == "N Tabiteuea" ~ 0.14,
+                               island == "N Tarawa" ~ 0.05,
                                island == "Onotoa" ~ 0.02,
                                island == "S Tabiteuea" ~ 0.02,
                                island == "S Tarawa" ~ 0.05,
@@ -135,12 +136,13 @@ island_buffer <- data.frame(island = islands, xmin_buff = NA, xmax_buff = NA, ym
                                island == "Tarawa" ~ 0.01,
                                TRUE ~ 0))
 
-# Loop through islands and assign to individual ggplot objects
+# Use site_info_all and island_buffer_all to create all possible versions of islands (e.g., N and S Tarawa as well as "full" Tarawa)
+# Loop through islands, plot each island to console, and assign to individual ggplot objects
 for (i in 1:length(islands)){
   island_i <- islands[i]
   
   # Get the min/max Lat/long dive site for each island
-  island_bounds <- site_info %>%
+  island_bounds <- site_info_all %>%
     filter(Island == island_i) %>%
     dplyr::select(Lat, Long) %>% 
     summarise(max_lat = max(Lat),
@@ -149,7 +151,7 @@ for (i in 1:length(islands)){
               min_long = min(Long))
  
   # Add a buffer around the dive sites to get a custom plotting window for each island
-  island_buffer_i <- island_buffer %>%
+  island_buffer_i <- island_buffer_all %>%
     filter(island == island_i)
   island_box = c(xmin = island_bounds$min_long + island_buffer_i$xmin_buff, 
                  xmax = island_bounds$max_long + island_buffer_i$xmax_buff,
@@ -183,7 +185,7 @@ for (i in 1:length(islands)){
   island_bathy_i <- fortify(island_bathy_i)
   
   # Subset ecological site info:
-  island_dat <- site_info %>%
+  island_dat <- site_info_all %>%
     filter(Island == island_i) 
   
   # Filter down to just the fore reef sites
@@ -288,67 +290,15 @@ print(p_region_gilbert)
 
 #########################################################################################################
 # Plot Gilbert archipelago
-# JACOB if you want to plot Hypothesized Reef Health use site_info_original throughout the entire "Plog Gilbert archipelago" section, if not use site_info
+# JACOB if you want to plot Hypothesized Reef Health, then you'll need "split" "islands since Reef Health is different for N vs South Tabiteuea
+# In other words, use site_info_split_islands and island_buffer_split_islands
 
-gilbert_islands <- sort(unique(site_info_original$Island))
+gilbert_islands <- sort(unique(site_info_split_islands$Island))
 
-# JACOB: this is copied from the island_buffer at the top of the script, only need to recreate this if using site_info_original (i.e., plotting Hypothesized Reef Health), otherwise just use the original island_buffer created up top
-island_buffer <- data.frame(island = gilbert_islands, xmin_buff = NA, xmax_buff = NA, ymin_buff = NA, ymax_buff = NA) %>%
-  mutate(xmin_buff = case_when(island == "Abaiang" ~ -0.165,
-                               island == "Abemama" ~ -0.02,
-                               island == "Butaritari" ~ -0.02,
-                               island == "Kiritimati" ~ -0.03, 
-                               island == "N Tabiteuea" ~ -0.02,
-                               island == "N Tarawa" ~ -0.01,
-                               island == "Onotoa" ~ -0.02,
-                               island == "S Tabiteuea" ~ -0.01,
-                               island == "S Tarawa" ~ 0,
-                               island == "Tabuaeran" ~ -0.01,
-                               island == "Tabiteuea" ~ -0.02,
-                               island == "Tarawa" ~ -0.01,
-                               TRUE ~ 0)) %>%
-  mutate(xmax_buff = case_when(island == "Abaiang" ~ 0.03,
-                               island == "Abemama" ~ 0.02,
-                               island == "Butaritari" ~ 0.02,
-                               island == "Kiritimati" ~ 0.25, 
-                               island == "N Tabiteuea" ~ 0.13,
-                               island == "N Tarawa" ~ 0.02,
-                               island == "Onotoa" ~ 0.02,
-                               island == "S Tabiteuea" ~ 0.02,
-                               island == "S Tarawa" ~ 0.05,
-                               island == "Tabuaeran" ~ 0.08,
-                               island == "Tabiteuea" ~ 0.02,
-                               island == "Tarawa" ~ 0.05,
-                               TRUE ~ 0)) %>%
-  mutate(ymin_buff = case_when(island == "Abaiang" ~ -0.01,
-                               island == "Abemama" ~ -0.038,
-                               island == "Butaritari" ~ -0.015,
-                               island == "Kiritimati" ~ -0.215, 
-                               island == "N Tabiteuea" ~ -0.091,
-                               island == "N Tarawa" ~ -0.02,
-                               island == "Onotoa" ~ -0.02,
-                               island == "S Tabiteuea" ~ -0.01,
-                               island == "S Tarawa" ~ -0.011,
-                               island == "Tabuaeran" ~ -0.016,
-                               island == "Tabiteuea" ~ -0.02,
-                               island == "Tarawa" ~ -0.02,
-                               TRUE ~ 0)) %>%
-  mutate(ymax_buff = case_when(island == "Abaiang" ~ 0.12,
-                               island == "Abemama" ~ 0.02,
-                               island == "Butaritari" ~ 0.005,
-                               island == "Kiritimati" ~ 0.04, 
-                               island == "N Tabiteuea" ~ 0.05,
-                               island == "Onotoa" ~ 0.02,
-                               island == "S Tabiteuea" ~ 0.062,
-                               island == "S Tarawa" ~ 0.01,
-                               island == "Tabuaeran" ~ 0.04,
-                               island == "Tabiteuea" ~ 0.05,
-                               island == "Tarawa" ~ 0.01,
-                               TRUE ~ 0))
+island_buffer_split_islands <- island_buffer_all %>%
+  filter(island %in% c("Tabiteuea", "Tarawa") == FALSE)
 
-
-
-archipel_bounds <- site_info_original %>%
+archipel_bounds <- site_info_split_islands %>%
   filter(Island %in% gilbert_islands) %>%
   dplyr::select(Lat, Long) %>%
   summarise(max_lat = max(Lat),
@@ -367,14 +317,14 @@ gilbert_crop <- st_crop(kir_sf, archipel_box) # Use this because scalebar() and 
 islands_labeled <- NULL
 for (i in 1:length(gilbert_islands)){
   island_i <- gilbert_islands[i]
-  island_bounds <- site_info_original %>%
+  island_bounds <- site_info_split_islands %>%
     filter(Island == island_i) %>%
     dplyr::select(Lat, Long) %>% 
     summarise(max_lat = max(Lat),
               min_lat = min(Lat),
               max_long = max(Long),
               min_long = min(Long))
-  island_buffer_i <- island_buffer %>%
+  island_buffer_i <- island_buffer_split_islands %>%
     filter(island == island_i)
   
   island_polygon = data.frame(xmin = island_bounds$min_long + island_buffer_i$xmin_buff,
@@ -403,11 +353,8 @@ for (i in 1:length(gilbert_islands)){
 # Warning message: All geometry functions (e.g., st_intersects) assumes coordinates are planar (i.e., projected coordinates with planar units like "km")
 # Here stick with units arc degrees (near the equator, dist = 0.1 approximates 11.1 km)
 
-
-
 ##############
 # Create a buffer around each island that has ecological data
-
 # First, load village and reef info from table 1
 village_info <- read.csv(file = file.path(datadir, "data_from_table_1.csv")) %>%
   # Clean village name to match Jacob's data
@@ -433,6 +380,8 @@ reef_colors <- brewer.pal(8, "Greens")[c(8, 6, 4)]
 
 # JACOB, remove aes(fill = Rank.Reef.Health) if you don't want to plot Hypothesized Reef Health
 p_gilbert <- ggplot() +
+  # JACOB - if you don't want a buffer around the sampled islands remove geom_sf(data = sampled_buffer)
+  # Plot buffer around all sampled islands
   geom_sf(data = sampled_buffer, aes(fill = Rank.Reef.Health)) +
   scale_fill_manual(breaks = c("High", "Medium", "Low", "Not sampled"), values = c(reef_colors, "gray")) +
   # Plot islands:
@@ -441,7 +390,7 @@ p_gilbert <- ggplot() +
   geom_sf_label(data = sampled_buffer, aes(label = island_name), size = 2, nudge_x = 1, nudge_y = c(0, 0, 0, 0, 0, 0, 0, -0.07)) +
   theme_bw() +
   xlim(172.5, 179) +
-  labs(title = "Gilbert Islands", x = "", y = "", fill = "Hypothesized Reef Health") +
+  labs(title = "", x = "", y = "", fill = "Hypothesized Reef Health") +
   scalebar(data = gilbert_crop, transform = TRUE, dist_unit = "km", dist = 100, location = "bottomleft", model = "WGS84", st.size = 3) +
   theme(legend.position = "right", legend.direction = "vertical", legend.text = element_text(size = 8), legend.title = element_text(size = 10))
 
@@ -451,203 +400,60 @@ print(p_gilbert)
 ######################################################################################################
 # COMBINE INTO MULTIPANEL PLOTS
 ######################################################################################################
-# Version 1: Line and Gilbert Islands as a single figure
 
-legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
-                      legend.box.margin = margin(c(0, 0, 0, 0)), 
-                      legend.text = element_text(size = 7), 
-                      legend.title = element_text(size = 7))
+# Default panel theme is no legend
 panel_theme <- theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
 
+# Remove legend from all plots:
 p_abaiang_panel <- p_abaiang + panel_theme
 p_abemama_panel <- p_abemama + panel_theme
-p_butaritari_panel <- p_butaritari + theme(legend.position = "none", plot.margin = unit(c(0, -0.5, 0, 0), "cm"))
-
-p_kiritimati_panel <- p_kiritimati + panel_theme 
-p_n_tabiteuea_panel <- p_n_tabiteuea + panel_theme
-p_n_tarawa_panel <- p_n_tarawa + panel_theme
-p_onotoa_panel <- p_onotoa + theme(legend.position = "none", plot.margin = unit(c(0, 0.5, 0, 0), "cm")) # add small margin to final plot in row
-
-p_s_tabiteuea_panel <- p_s_tabiteuea + panel_theme
-p_s_tarawa_panel <- p_s_tarawa + panel_theme
-p_tabuaeran_panel <- p_tabuaeran  + theme(legend.position = "none", plot.margin = unit(c(0, 0.5, 0, 0), "cm"))
-
-# Insets are difficult to control once we move to multipanel image - remove inset for now
-# p_gilbert_inset <- ggdraw(p_gilbert + panel_theme) + draw_plot(p_region_gilbert + theme_half_open(), x = 1, y = 0.98, width = 0.65, height = 0.65, vjust = 1, hjust = 1) #+ panel_theme
-# p_gilbert_inset
-# ggsave(filename = file.path(outdir, "map_figure-X_gilbert-with-inset.png"), width = 8.5, height = 11)
-# 
-# p_line_inset <- ggdraw(p_line + panel_theme) + draw_plot(p_region_line + theme_half_open(), x = 1, y = 0.95, width = 0.65, height = 0.65, vjust = 1, hjust = 1)
-# p_line_inset
-# ggsave(filename = file.path(outdir, "map_figure-X_line-with-inset.png"), width = 8.5, height = 11)
-
+p_butaritari_panel <- p_butaritari + theme(legend.position = "none", plot.margin = unit(c(0, 0.5, 0, 0), "cm")) # add small margin to final plot in row
+p_onotoa_panel <- p_onotoa + panel_theme
+p_tabiteuea_panel <- p_tabiteuea + panel_theme
+p_tarawa_panel <- p_tarawa + panel_theme
 p_gilbert_panel <- p_gilbert + panel_theme
-p_line_panel <- p_line + panel_theme
-p_region_panel <- p_region + panel_theme
+
+# In case you want to use them, individual ggplot objects were also created for the "split" island versions
+#p_n_tabiteuea_panel <- p_n_tabiteuea + panel_theme
+#p_n_tarawa_panel <- p_n_tarawa + panel_theme
+#p_s_tabiteuea_panel <- p_s_tabiteuea + panel_theme
+#p_s_tarawa_panel <- p_s_tarawa + panel_theme
 
 # Get legends
-market_legend <- get_legend(p_kiritimati + legend_theme) # any island legend should work
-reef_legend <- get_legend(p_gilbert + legend_theme) # use gilbert legend (line islands legend only has two categories for reef health)
+legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)),
+                      legend.box.margin = margin(0, 0, 0, 0),
+                      legend.text = element_text(size = 7),
+                      legend.title = element_text(size = 7))
+reef_legend <- get_legend(p_gilbert + legend_theme)
+# eco_legend <- get_legend(p_abaiang + legend_theme) # currently using p_tarawa to plot eco_legend
 
 # Arrange panels by row
 row1 <- plot_grid(p_abaiang_panel, 
                   p_abemama_panel,
                   p_butaritari_panel,
-                  market_legend,
-                  nrow = 1,
-                  ncol = 4,
-                  rel_widths = c(0.75, 0.68, 1, 0.9))
-row1
-ggsave(filename = file.path(outdir, "map_figure-X_row1.png"), width = 8.5, height = 11)
+                  nrow = 1, ncol = 3,
+                  rel_widths = c(1.1, 1, 1.6)) # adjust relative widths of each plot
 
-row2 <- plot_grid(p_kiritimati_panel,
-                  p_n_tabiteuea_panel, 
-                  p_n_tarawa_panel,
-                  p_onotoa_panel,
-                  nrow = 1,
-                  ncol = 4)
-row2
-ggsave(filename = file.path(outdir, "map_figure-X_row2.png"), width = 8.5, height = 11)
+row2 <- plot_grid(p_onotoa_panel,
+                  p_tabiteuea_panel, 
+                  p_tarawa, # use p_tarawa (with legend) instead of p_tarawa_panel
+                  nrow = 1, ncol = 3,
+                  rel_widths = c(1, 1.1, 1.55),
+                  align = "h", axis = "t")
 
-row3 <- plot_grid(p_s_tabiteuea_panel, 
-                  p_s_tarawa_panel,
-                  p_tabuaeran_panel,
-                  nrow = 1,
-                  ncol = 3,
-                  rel_widths = c(0.45, 1, 0.56))
-row3
-ggsave(filename = file.path(outdir, "map_figure-X_row3.png"), width = 8.5, height = 11)
+row3 <- plot_grid(p_region_gilbert, p_gilbert_panel, reef_legend,
+                  nrow = 1, ncol = 3,
+                  rel_widths = c(1.1, 1, 1),
+                  align = "h", axis = "t")
 
-# FIX IT - works as a single panel but now when including as part of row4
-# p_legend_inset <- plot_grid(reef_legend,
-#                             p_region_panel + theme(plot.margin = unit(c(-4, 0, 0, 6.5), "cm")),
-#                             nrow = 2,
-#                             ncol = 1, 
-#                             rel_heights = c(1, 0.6),
-#                             greedy = FALSE)
-# ggsave(filename = file.path(outdir, "map_figure-X_row4-legend-inset.png"))
-
-row4 <- plot_grid(p_region + theme(plot.margin = unit(c(0, 0, 0, 0), "cm")),
-                  p_gilbert_panel + theme(plot.margin = unit(c(0, 0, 0, 0), "cm")),
-                  p_line_panel + theme(plot.margin = unit(c(0, -1.2, 0, 0), "cm")),
-                  reef_legend,
-                  nrow = 1,
-                  ncol = 4,
-                  rel_widths = c(1, 1, 0.65, 1),
-                  align = "hv", axis = "tl")
-row4
-ggsave(filename = file.path(outdir, "map_figure-X_row4.png"), width = 8.5, height = 11)
-
-# Combine rows together
-# REMINDER: first adjust rel_widths or rel_heightss
-# then adjust plot margins of each row; adjust rows one at a time starting from row 1
-plot_grid(row1 + theme(plot.margin = unit(c(0, 0, -4, 0), "cm")), 
-          row2, 
-          row3 + theme(plot.margin = unit(c(-4, 0, 0, 0), "cm")), 
-          row4 + theme(plot.margin = unit(c(-8, 0, 0, 0), "cm")),
-          nrow = 4, 
-          ncol = 1)
-#align = 'v', axis = 'lr')
-ggsave(filename = file.path(outdir, "map_figure-X.png"), width = 8.5, height = 11)
-
-######################################################################################################
-# Version 2: Line and Gilbert Islands as separate figures
-
-legend_theme <- theme(legend.margin = margin(c(0, 0, 0, 0)), 
-                      legend.box.margin = margin(0, 0, 0, 0), 
-                      legend.text = element_text(size = 7), 
-                      legend.title = element_text(size = 7))
-
-# Line Islands Figure
-p_kirimati_panel <- p_kiritimati + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_tabuaeran_panel <- p_tabuaeran + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_line_panel <- p_line + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_region_line_panel <- p_region_line + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-line_market_legend <- get_legend(p_kiritimati + legend_theme)
-line_reef_legend <- get_legend(p_line + legend_theme)
-
-# Arrange panels by row
-line_top_row <- plot_grid(p_kirimati_panel, 
-                          p_tabuaeran_panel,
-                          line_market_legend,
-                          nrow = 1,
-                          ncol = 3,
-                          rel_widths = c(0.85, 1, 0.3))
-line_top_row
-ggsave(filename = file.path(outdir, "map_figure-X_line-islands-row1.png"), width = 11, height = 8.5)
-
-line_bottom_row <- plot_grid(p_region_line_panel,
-                             p_line_panel,
-                             line_reef_legend,
-                             nrow = 1,
-                             ncol = 3,
-                             rel_widths = c(1, 0.8, 0.25),
-                             align = 'h', axis = 'tb')
-line_bottom_row
-ggsave(filename = file.path(outdir, "map_figure-X_line-islands-row2.png"), width = 11, height = 8.5)
-
-# Put together in single figure
-plot_grid(line_top_row, 
-          line_bottom_row + theme(plot.margin = unit(c(-3, 0, 0, 0), "cm")),
-          nrow = 2,
-          ncol = 1,
-          rel_heights = c(1, 0.7))
-          #align = 'v', axis = 'lr')
-ggsave(filename = file.path(outdir, "map_figure-X_line-islands.png"), width = 11, height = 8.5)
-
-######################################################################################################
-# Gilbert Islands Figure
-p_abaiang_panel <- p_abaiang + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_abemama_panel <- p_abemama + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_butaritari_panel <- p_butaritari + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_n_tabiteuea_panel <- p_n_tabiteuea + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_n_tarawa_panel <- p_n_tarawa + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_onotoa_panel <- p_onotoa + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_s_tabiteuea_panel <- p_s_tabiteuea + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_s_tarawa_panel <- p_s_tarawa + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-
-
-p_gilbert_panel <- p_gilbert + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p_region_gilbert_panel <- p_region_gilbert + theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "cm"))
-gilbert_market_legend <- get_legend(p_abaiang + legend_theme)
-gilbert_reef_legend <- get_legend(p_gilbert + legend_theme)
-
-gilbert_row_1 <- plot_grid(p_abaiang_panel, 
-                           p_abemama_panel,
-                           p_butaritari_panel,
-                           p_n_tabiteuea_panel,
-                           gilbert_market_legend,
-                           nrow = 1,
-                           ncol = 5,
-                           rel_widths = c(0.75, 0.65, 1, 0.62, 0.5))
-gilbert_row_1
-ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands-row1.png"), width = 11, height = 8.5)
-
-gilbert_row_2 <- plot_grid(p_n_tarawa_panel, 
-                           p_onotoa_panel,
-                           p_s_tabiteuea_panel,
-                           p_s_tarawa_panel,
-                           nrow = 1,
-                           ncol = 4,
-                           rel_widths = c(0.71, 0.65, 0.79, 1))
-gilbert_row_2
-ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands-row2.png"), width = 11, height = 8.5)
-
-gilbert_row_3 <- plot_grid(p_region_gilbert_panel, 
-                           p_gilbert_panel,
-                           gilbert_reef_legend,
-                           nrow = 1,
-                           ncol = 3,
-                           rel_widths = c(1, 0.52, 0.2),
-                           align = 'h', axis = 'tb')
-gilbert_row_3
-ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands-row3.png"), width = 11, height = 8.5)
-
-plot_grid(gilbert_row_1, 
-          gilbert_row_2 + theme(plot.margin = unit(c(-3, 0, 0, 0), "cm")),
-          gilbert_row_3 + theme(plot.margin = unit(c(-2, 0, 0, -0.5), "cm")),
+plot_grid(row1,
+          row2,
+          row3,
           nrow = 3,
-          ncol = 1)
-#align = 'v', axis = 'lr')
-ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands.png"), width = 11, height = 8.5)
+          ncol = 1,
+          rel_heights = c(1, 1.2, 1),
+          align = "v", axis = "l")
+
+# When ready to save:
+#ggsave(filename = file.path(outdir, "map_figure-X_gilbert-islands.png"), width = 11, height = 8.5)
 
