@@ -71,6 +71,27 @@ hies_long_list <- lapply(hies_all_clean, function(i){pivot_dat_i(hies_i = i, id_
 # Column dta_file corresponds to filename in dta_files; keep this column until we're sure all col.names and col.labels are standardized (see code in manual cleaning section below)
 hies_long <- bind_rows(hies_long_list, .id = "dta_file") 
 
+##### ADDENDUM to HIES dataset:
+# Incorporate anthropometry data sent in a separate email from Mike - add to hies_labels, hies_long, AND hies_tidy
+# Note: removing sensitive PII data: birth_d, birth_m, birth_y, and name!
+# All other columns (p105 through p114) are already in hies_long, so only need to get age_m column
+anthropometry <- read_dta(file.path(datadir, "20210624_HIES-metadata", "KIR_2019_HIES_s1Demo_characteristics.dta")) %>% 
+  clean_data(return = "df") %>%
+  select(any_of(c(id_cols, "age_m")))
+
+anthropometry_long <- pivot_dat_i(hies_i = anthropometry, id_cols = id_cols)
+
+anthro_labels <- clean_data(anthropometry, return = "var_labels") %>%
+  # Mutate str_to_lower to match all other var_labels
+  mutate(col.labels = str_to_lower(col.labels))
+
+hies_long <- hies_long %>% 
+  bind_rows(anthropometry_long)
+
+hies_labels <- hies_labels %>%
+  bind_rows(anthro_labels)
+
+######
 
 # Exploring the data:
 # hies_long was created by joining columns that were unique to ALL data files, but there are still columns that are unique to just subsets of data files
@@ -146,7 +167,7 @@ non_standard_col_names <- as.data.frame(table(hies_clean_no_dta_file$col.names))
 
 non_standard_col_names # EMPTY
 
-# Now that hies_labels_clean and hies_long_clean are standardized, we can remove dta_file and use distinct() to remove duplicate questions across data files
+# Now that hies_labels_clean is standardized, we can remove dta_file and use distinct() to remove duplicate questions across data files
 hies_labels_distinct <- hies_labels_clean %>%
   select(-dta_file) %>%
   distinct() 
@@ -154,6 +175,8 @@ hies_labels_distinct <- hies_labels_clean %>%
 hies_long_distinct <- hies_long %>%
   select(-dta_file) %>%
   distinct() # Shrinks from 8,900,000 to 4,500,000 rows
+
+######
 
 # FINAL TIDY FORMAT (each row is a single observation at the HOUSEHOLD LEVEL):
 hies_house_tidy <- hies_long_distinct %>%
@@ -230,14 +253,29 @@ expend_agg <- expend_agg %>%
 income_agg <- income_agg %>%
   select(!all_of(non_standard_columns))
 
-# Get fill in the blank responses for expenditure and income datasets ("description" column)
-expend_alpha <- expend_agg %>%
-  select(all_of(c("description", "coicop"))) %>%
-  distinct()
 
-income_alpha <- income_agg %>%
-  select(all_of(c("description", "coicop"))) %>%
-  distinct()
+#### ADDENDUM to income and expenditure data
+# Incorporate PNDB metadata sent in a separate email from Mike
+# Left join pndb_meta to expend_agg and income_agg (pndb_meta contains nutritional info and descriptions for ALL pndb codes, don't need to full join all of these, just left join to the data points in expend_agg and income_agg)
+# Columns: Food_description and food_desc_pndb can be used as coded "translations" of the fill-in-the-blank responses
+# Some of the entries in pndb_meta are blank PNDB codes... filter these out before left-joining
+pndb_meta <- read_dta(file.path(datadir, "20210624_HIES-metadata", "PNDB_17May2020.dta")) %>% clean_data(return = "df") %>% rename(pndbcode = PNDBCode)
+
+income_agg <- income_agg %>%
+  left_join(pndb_meta %>% filter(pndbcode %in% c("", "..")==FALSE) %>% distinct(), by = "pndbcode") # need distinct() for pndb_meta - some rows are duplicates
+
+expend_agg <- expend_agg %>%
+  left_join(pndb_meta %>% filter(pndbcode %in% c("", "..")==FALSE) %>% distinct(), by = "pndbcode") # need distinct() for pndb_meta - some rows are duplicates
+
+# Get fill in the blank responses for expenditure and income datasets ("description" column)
+# No longer necessary since these are "translated" / coded in the PNDB addendum
+# expend_alpha <- expend_agg %>%
+#   select(all_of(c("description", "coicop"))) %>%
+#   distinct()
+# 
+# income_alpha <- income_agg %>%
+#   select(all_of(c("description", "coicop"))) %>%
+#   distinct()
 
 
 # get variable labels for each of the files in dta_file_not_pivoting_tidy
@@ -246,6 +284,9 @@ root_labels <- clean_data(agric_root, return = "var_labels")
 fruit_labels <- clean_data(agric_fruit, return = "var_labels")
 expend_labels <- clean_data(expend_agg, return = "var_labels")
 income_labels <- clean_data(income_agg, return = "var_labels")
+
+# Get var_labels for pndb columns
+pndb_labels <- clean_data(pndb_meta, return = "var_labels")
 
 # Bind all column names and labels together for final output
 hies_labels_final <- hies_labels_distinct %>%
@@ -257,12 +298,11 @@ hies_labels_final <- hies_labels_distinct %>%
   distinct() %>%
   arrange(col.names)
 
-
 # Outputs:
 # Final long format of all uniquely identified questions: hies_long_distinct - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files)
 # Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
 # Key for matching col.names (question_id in hies) to col.labels: hies_labels_final
-# Fill-in-the-blank responses for translation: hies_alpha, expend_alpha, and income_alpha
+# Fill-in-the-blank responses for translation: hies_alpha
 # All "special roster" files that do not pivot to tidy (because questions do not have unique IDs)
 
 file.date <- Sys.Date() # add file.date to all outputs to keep track of most recent versions
@@ -276,245 +316,10 @@ write.csv(hies_alpha, file = file.path(outdir, paste(file.date, "_hies_text-resp
 
 # HIES questions related to expenditures and income (pre-processed by SPC data team)
 write.csv(expend_agg, file = file.path(outdir, paste(file.date, "_hies_expenditures-standard-units.csv", sep = "")), row.names = FALSE)
-write.csv(expend_alpha, file = file.path(outdir, paste(file.date, "_hies_expenditures-for-translation.csv", sep = "")), row.names = FALSE)
 write.csv(income_agg, file = file.path(outdir, paste(file.date, "_hies_income-standard-units.csv", sep = "")), row.names = FALSE)
-write.csv(income_alpha, file = file.path(outdir, paste(file.date, "_hies_income-for-translation.csv", sep = "")), row.names = FALSE)
 
 # Data rosters that do not have unique IDs:
 write.csv(agric_veg, file = file.path(outdir, paste(file.date, "_special-roster-hies_vegetable-details.csv", sep = "")), row.names = FALSE)
 write.csv(agric_root, file = file.path(outdir, paste(file.date, "_special-roster-hies_root-crop-details.csv", sep = "")), row.names = FALSE)
 write.csv(agric_fruit, file = file.path(outdir, paste(file.date, "_special-roster-hies_fruit-details.csv", sep = "")), row.names = FALSE)
-
-
-
-##############################################################################################################################
-# OLD CODE:
-
-# Use values_fn to identify all the responses with non-unique values
-hies_unique_counts <- hies_long_distinct %>%
-  pivot_wider(names_from = question_id, values_from = value, values_fn = length) 
-
-# How many questions have non-unique values
-hies_test <- hies_unique_counts != 1
-# hies_test[1:10, 1:10] matrix of TRUE/FALSE
-hies_test_df <- data.frame(non_unique_count = colSums(hies_test, na.rm = TRUE)) %>%
-  rownames_to_column("question_id") 
-
-# This is the number of question_id's with non-unique values
-hies_test_df %>%
-  filter(question_id %in% id_cols == FALSE) %>% # Remove ID cols - these don't have to be unique since they aren't included in pivot wide
-  filter(non_unique_count > 0) %>% # Which columns contain one or more non-unique value
-  nrow() 
-
-# These are the qs that cannot be uniquely identified for tidy format (one observation per row)
-qs_with_non_unique_ids <- hies_test_df %>%
-  filter(question_id %in% id_cols == FALSE) %>% # Remove ID cols - these don't have to be unique since they aren't included in pivot wide
-  filter(non_unique_count > 0) %>% 
-  pull(question_id)
-
-# Explore qs_with_non_unique_ids
-# hies_unique_counts %>%
-#   select(any_of(c(id_cols, "h1901r__id"))) %>%
-#   filter(h1901r__id > 1) %>%
-#   arrange(desc(h1901r__id))
-# 
-# hies_long_distinct %>%
-#   filter(interview__key == "83-74-86-59" & question_id == "h1901r__id")
-# 
-# hies_all[[19]] %>% filter(interview__key == "83-74-86-59")
-# 
-# # Try binding to col.labels for more context
-# hies_long_distinct %>%
-#   left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
-#   filter(question_id == "recall") %>%
-#   arrange(interview__key)
-
-# Option 1:
-# Remove qs_with_non_unique_ids from hies_long_distinct so that pivot_wide can work
-# Output qs_with_non_unique_ids as a separate data file
-
-# Option 2: # Append qs_with_non_unique_ids with dta file metadata so they become unique
-# Go back to hies_long_clean (before dta file number was removed): These are the corresponding dta_file numbers for all the qs_with_non_unique_ids
-look_up_metadata <- hies_long_clean %>% 
-  filter(question_id %in% qs_with_non_unique_ids) %>% 
-  select(dta_file, question_id) %>% 
-  distinct() %>% 
-  arrange(question_id) %>% 
-  print(n=96)
-
-# Get metadata from each dta file name
-dta_files
-dta_meta_1 <- str_split(dta_files, pattern = '-', simplify = TRUE)[,2]
-dta_meta_2 <- str_split(dta_meta_1, pattern = '_', simplify = TRUE)[,1]
-dta_meta_df <- data.frame(filename_metadata = dta_meta_2, dta_file = 1:length(dta_meta_2)) %>%
-  mutate(dta_file = as.character(dta_file)) # required to join with look_up_metadata
-
-# Join metadata to qs_with_non_unique_ids
-# This df shows that some question_ids are shared for different surveys (dta_files) and should have a more descriptive name (new_question_id) so they can be uniquely identified
-look_up_metadata_df <- look_up_metadata %>%
-  left_join(dta_meta_df, by = "dta_file") %>%
-  mutate(new_question_id = paste(question_id, "_", filename_metadata, sep = ""))
-
-# Go back to hies_long_clean and add metadata before dropping duplicate data
-hies_long_with_metadata <- hies_long_clean %>%
-  left_join(look_up_metadata_df, by = c("dta_file", "question_id")) %>%
-  # substitute question_id with new_question_id # Reminder: only doing this for the qs_with_non_unique_ids so that duplicate data can still be dropped
-  mutate(question_id = if_else(is.na(new_question_id)==FALSE, true = new_question_id, false = question_id)) %>%
-  select(-c(dta_file, filename_metadata, new_question_id)) %>%
-  distinct()
-
-# NOW: individual level surveys can pivot to Tidy format but not household level
-
-# Repeat process of finding which responses are non-unique
-# Use values_fn to identify all the responses with non-unique values
-hies_long_with_metadata %>%
-  filter(is.na(hm_basic__id)) %>%
-  pivot_wider(names_from = question_id, values_from = value)
-
-hies_with_metadata_unique_counts <- hies_long_with_metadata %>%
-  filter(is.na(hm_basic__id)) %>%
-  pivot_wider(names_from = question_id, values_from = value, values_fn = length)
-
-# Wait until BOTH individ and household level can pivot to tidy to do this  
-# hies_individ_tidy <- hies_long_with_metadata %>%
-#   filter(is.na(hm_basic__id)==FALSE) %>%
-#   pivot_wider(names_from = question_id, values_from = value) %>% 
-#   arrange(interview__key)
-
-# How many questions have non-unique values
-hies_with_metadata_test <- hies_with_metadata_unique_counts != 1
-# hies_test[1:10, 1:10] matrix of TRUE/FALSE
-hies_with_metadata_test_df <- data.frame(non_unique_count = colSums(hies_with_metadata_test, na.rm = TRUE)) %>%
-  rownames_to_column("question_id") 
-
-# This is the number of question_id's with non-unique values
-hies_with_metadata_test_df %>%
-  filter(question_id %in% id_cols == FALSE) %>% # Remove ID cols - these don't have to be unique since they aren't included in pivot wide
-  filter(non_unique_count > 0) %>% # Which columns contain one or more non-unique value
-  nrow() 
-
-# These are the qs that still cannot be uniquely identified for tidy format (one observation per row)
-qs_with_non_unique_ids_2 <- hies_with_metadata_test_df %>%
-  filter(question_id %in% id_cols == FALSE) %>% # Remove ID cols - these don't have to be unique since they aren't included in pivot wide
-  filter(non_unique_count > 0) %>% 
-  pull(question_id)
-
-# Why are qs_with_non_unique_ids_2 still Not unique:
-# Explore qs_with_non_unique_ids_2
-hies_with_metadata_unique_counts %>%
-  select(any_of(c(id_cols, "h1901r__id_AgricVegetables"))) %>%
-  filter(h1901r__id_AgricVegetables>1) %>%
-  arrange(interview__key) 
-
-# Why do these interviews have multiple rows for h1901r__id_AgricVegetables?
-# Go back to hies_long_with_metadata
-hies_long_with_metadata %>%
-  filter(interview__key == "36-96-00-31" & question_id == "h1901r__id_AgricVegetables")
-
-# FIX IT: question_id with the word "ID" in them should be replaced with the VALUE just like with other rosters:
-# Rembmer p904 turns into p904_1 to p904_2 depending on "ID" generated by p903
-
-# What about "h1912__2_AgricRootCrop"
-hies_with_metadata_unique_counts %>%
-  select(any_of(c(id_cols, "h1912__2_AgricRootCrop"))) %>%
-  filter(h1912__2_AgricRootCrop>1) %>%
-  arrange(interview__key) 
-
-# Go back to hies_long_with_metadata
-# Respondent replied with "2" on question 1911
-# This generated question_id h1912__2, but there should really only be one of these
-hies_long_with_metadata %>%
-  filter(interview__key == "33-97-85-65" & question_id == "h1912__2_AgricRootCrop")
-# FIX IT: This looks like an error: Two different answers to the same question - take the mean?
-
-# How many of the different qs_with_non_unique_ids_2 are just isolated errors like this
-hies_errors <- hies_with_metadata_unique_counts %>%
-  select(all_of(c(id_cols, qs_with_non_unique_ids_2))) %>%
-  rowwise() %>%
-  mutate()
-
-View(hies_errors)
-# Sort by different columns
-
-# Sort by line_id_ExpenditureAggreg
-# One interview has 263 of these responses
-# Interview: 29-46-67-68
-hies_long_with_metadata %>%
-  filter(interview__key == "29-46-67-68" & question_id == "line_id_ExpenditureAggreg")
-
-
-# hies_long_with_metadata %>%
-#   filter(question_id == "h1901r__id") %>%
-#   filter(value > 0) %>%
-#   arrange(interview__key)
-# 
-# hies_long_with_metadata %>%
-#   filter(question_id == "recall") %>%
-#   arrange(interview__key)
-# 
-# # Try binding to col.labels for more context
-# hies_long_with_metadata %>%
-#   left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
-#   filter(question_id == "recall") %>%
-#   arrange(interview__key)
-
-
-# TO DO: Add filename_metadata to hies_labels_distinct so they are part of the question_id to label key
-# Use this new version for downstream joins
-
-# TO DO: Output final long format 
-# TO DO: Output final tidy formats for household and individual level
-
-
-# FIX IT - move this to "Option1" above (pivot after filtering)
-# FINAL LONG FORMAT (includes household and individual-level data):
-hies_unique_qs <- hies_long_distinct %>%
-  filter(question_id %in% qs_with_non_unique_ids==FALSE) %>%
-  arrange(interview__key) 
-
-# FINAL LONG FORMAT for non-unique-qs (note: all are at the household level)
-hies_non_unique_qs <- hies_long_distinct %>%
-  filter(question_id %in% qs_with_non_unique_ids) %>%
-  arrange(interview__key)
-
-# FINAL TIDY FORMAT (each row is a single observation at the HOUSEHOLD LEVEL):
-hies_house_tidy <- hies_unique_qs %>%
-  filter(is.na(hm_basic__id)) %>%
-  pivot_wider(names_from = question_id, values_from = value) %>%
-  arrange(interview__key)
-
-# FINAL TIDY FORMAT (each row is a single observation at the INDIVIDUAL LEVEL):
-hies_individ_tidy <- hies_unique_qs %>%
-  filter(is.na(hm_basic__id)==FALSE) %>%
-  pivot_wider(names_from = question_id, values_from = value) %>%
-  arrange(interview__key)
-
-# SHORT ANSWERS FOR TRANSLATION:
-# Join with hies_labels_distinct for question context (helpful for translation)
-hies_alpha <- hies_long_distinct %>%
-  filter(str_detect(value, pattern = "[:alpha:]")) %>% # response has text (i.e., alpha) 
-  # "FIND" the word "text" in the HIES survey to get all the question_id's for the fill-in-the-blanks
-  # ...and question_id ends with either an "n", "n1", "n2", "n3", "n4", "e" (e.g., p903n, h1801n2, h1122e) OR contains an "oth"
-  filter((str_detect(question_id, pattern = "n$|n1$|n2$|n3$|n4$|e$") | str_detect(question_id, pattern = "oth") | question_id %in% c("nonfinfish_consump", "travel_time_within"))) %>% 
-  # REMOVE FALSE MATCHES:
-  filter(question_id %in% c("desc_2001e", "description", "ind_desc_main", "occ_desc_main")==FALSE) %>%
-  left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
-  select(question_id, value, col.labels) %>%
-  unique() %>%
-  arrange(question_id)
-  
-# FIX IT - move to top once finalized
-# Outputs:
-# Final long format of all uniquely identified questions: hies_unique_qs - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files), remove qs_with_non_unique_ids
-# Final long format of all NON-uniquely identified questions: hies_non_unique_qs
-# Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
-# Key for matching col.names (question_id in hies) to col.labels: hies_labels_distinct
-# "Alpha" responses for translation: hies_fill_in_the_blank
-
-write.csv(hies_unique_qs, file = file.path(outdir, "hies_long_qs-with-unique-ids.csv"), row.names = FALSE)
-write.csv(hies_non_unique_qs, file = file.path(outdir, "hies_long_qs-with-non-unique-ids.csv"), row.names = FALSE)
-write.csv(hies_house_tidy, file = file.path(outdir, "hies_tidy_household-level.csv"), row.names = FALSE)
-write.csv(hies_individ_tidy, file = file.path(outdir, "hies_tidy_individual-level.csv"), row.names = FALSE)
-write.csv(hies_labels_distinct, file = file.path(outdir, "hies_question-id-to-label-key.csv"), row.names = FALSE)
-write.csv(hies_alpha, file = file.path(outdir, "hies_text-responses-for-translation.csv"), row.names = FALSE)
 
