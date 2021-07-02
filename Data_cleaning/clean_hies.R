@@ -63,7 +63,6 @@ id_cols <- c(id_cols, "hm_basic__id")
 #   pivot_longer(cols = !all_of(c(id_cols)), names_to = "question_id") %>% 
 #   filter(is.na(value)==FALSE) # Remove questions with NA responses
 
-# FIX IT - return pivot_dat_i function to filtering out "" and NA's
 # Pivot long with pivot_dat_i
 # lapply pivot function to all hies_all
 hies_long_list <- lapply(hies_all_clean, function(i){pivot_dat_i(hies_i = i, id_cols = id_cols)})
@@ -71,19 +70,45 @@ hies_long_list <- lapply(hies_all_clean, function(i){pivot_dat_i(hies_i = i, id_
 # Column dta_file corresponds to filename in dta_files; keep this column until we're sure all col.names and col.labels are standardized (see code in manual cleaning section below)
 hies_long <- bind_rows(hies_long_list, .id = "dta_file") 
 
+
+
 ##### ADDENDUM to HIES dataset:
 # Incorporate anthropometry data sent in a separate email from Mike - add to hies_labels, hies_long, AND hies_tidy
 # Note: removing sensitive PII data: birth_d, birth_m, birth_y, and name!
 # All other columns (p105 through p114) are already in hies_long, so only need to get age_m column
 anthropometry <- read_dta(file.path(datadir, "20210624_HIES-metadata", "KIR_2019_HIES_s1Demo_characteristics.dta")) %>% 
   clean_data(return = "df") %>%
-  select(any_of(c(id_cols, "age_m")))
+  # Assemble birthday columns into a single column
+  mutate(birthday_paste = paste(birth_y, birth_m, birth_d, sep = "-")) %>% 
+  # Clean birthdates - some dates returned as NA because either month or day entered as "99" 
+  mutate(birthday_paste_cleaned = str_replace(birthday_paste, "-99-", "-6-"), # replaces all "99" months with "6" (estimate = June)
+         birthday_paste_cleaned = str_replace(birthday_paste_cleaned, "99$", "15"))  %>% # "$" specifies end of the string - i.e., replaces all days with "15" (estimate = 15th of the month)
+  mutate(birthday_yyyy_mm_dd = as.Date(birthday_paste_cleaned, format = "%Y-%m-%d")) %>% 
+  # Extract start and end dates - everything before "T" - i.e., before timestamp
+  mutate(end_date = str_extract(end_pers_details, ".+?(?=T)")) %>%
+  mutate(start_date = str_extract(start_pers_details, ".+?(?=T)")) %>%
+  mutate(end_date = as.Date(end_date, "%Y-%m-%d")) %>%
+  mutate(start_date = as.Date(start_date, "%Y-%m-%d")) %>%
+  # NOTE: In some cases there are as many as four years between the start and end dates. In addition, there appears to be errors in start and end dates (sometimes end date comes before start date)
+  # Related to the issues with start/end date, will calculate age in months as both start date minus birthday and end date minus birthday
+  # Difference in dates is reported in "days"; multiply by 12/365 to get number of months
+  mutate(age_mo_start = as.numeric((start_date - birthday_yyyy_mm_dd)*12/365),
+         age_mo_end = as.numeric((end_date - birthday_yyyy_mm_dd)*12/365)) %>%
+  # Drop all PII columns
+  select(any_of(c("interview__key", "hm_basic__id", "age_m", "age_mo_start", "age_mo_end", "start_pers_details", "end_pers_details"))) %>%
+  # note: anthropometry only contains interview__key and hm_basic__id - Bind to hies_long to get other id_cols 
+  mutate(hm_basic__id = as.character(hm_basic__id)) %>%
+  left_join(hies_long %>% select(id_cols) %>% distinct(), by = c("interview__key", "hm_basic__id"))
 
 anthropometry_long <- pivot_dat_i(hies_i = anthropometry, id_cols = id_cols)
 
 anthro_labels <- clean_data(anthropometry, return = "var_labels") %>%
   # Mutate str_to_lower to match all other var_labels
-  mutate(col.labels = str_to_lower(col.labels))
+  mutate(col.labels = str_to_lower(col.labels)) %>%
+  # Define labels for calculated columns
+  mutate(col.labels = case_when(col.names=="age_mo_start" ~ "calculated age in months from interview start date",
+                                col.names=="age_mo_end" ~ "calculated age in months from interview end date",
+                                TRUE ~ col.labels))
 
 hies_long <- hies_long %>% 
   bind_rows(anthropometry_long)
@@ -189,6 +214,21 @@ hies_individ_tidy <- hies_long_distinct %>%
   filter(is.na(hm_basic__id)==FALSE) %>%
   pivot_wider(names_from = question_id, values_from = value) %>%
   arrange(interview__key)
+
+
+########################################
+# DATA CHECK: 
+# Check hies_house_tidy
+# data.frame(table(interview__key = hies_house_tidy$interview__key)) %>% filter(Freq > 1)
+# 
+# # Check hies_individ_tidy: i.e., any rows with repeated interview__key should have different hm_basic__id
+# # Unique length of full_id should be same as nrows (hies_individ_tidy)
+# hies_individ_tidy %>%
+#   mutate(full_id = paste(interview__key, hm_basic__id, sep = "")) %>%
+#   pull(full_id) %>%
+#   unique() %>%
+#   length()
+########################################
 
 # SHORT ANSWERS FOR TRANSLATION:
 # FIRST, create FULL long format
