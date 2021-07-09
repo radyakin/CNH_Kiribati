@@ -112,6 +112,9 @@ anthropometry <- read_dta(file.path(nsfdatadir, anthropometry_filename)) %>%
   mutate(hm_basic__id = as.character(hm_basic__id)) %>%
   left_join(hies_long %>% select(all_of(id_cols)) %>% distinct(), by = c("interview__key", "hm_basic__id"))
 
+# Check to make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+unique(anthropometry$interview__key)[unique(anthropometry$interview__key) %in% unique(hies_long$interview__key)==FALSE] # should be empty
+
 anthropometry_long <- pivot_dat_i(hies_i = anthropometry, id_cols = id_cols)
 
 anthro_labels <- clean_data(anthropometry, return = "var_labels") %>%
@@ -129,6 +132,13 @@ anthro_labels <- clean_data(anthropometry, return = "var_labels") %>%
 anaemia_filename <- "anaemia.dta"
 anaemia <- read_dta(file.path(nsfdatadir, anaemia_filename)) %>% 
   clean_data(return = "df")
+
+# Check to make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+anaemia_no_match <- unique(anaemia$interview__key)[unique(anaemia$interview__key) %in% unique(hies_long$interview__key)==FALSE]
+# For now, remove these from the dataset: since they don't match to the HIES dataset, none of them will have information on division, island, village, etc. 
+anaemia <- anaemia %>%
+  filter(interview__key %in% anaemia_no_match==FALSE)
+
 anaemia_long <- pivot_dat_i(hies_i = anaemia, id_cols = id_cols)
 anaemia_labels <- clean_data(anaemia, return = "var_labels") %>%
   mutate(dta_filename = anaemia_filename)
@@ -138,6 +148,13 @@ anaemia_labels <- clean_data(anaemia, return = "var_labels") %>%
 diet_filename <- "dietary_recall.dta"
 diet <- read_dta(file.path(nsfdatadir, diet_filename)) %>% 
   clean_data(return = "df")
+
+# Check to make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+diet_no_match <- unique(diet$interview__key)[unique(diet$interview__key) %in% unique(hies_long$interview__key)==FALSE]
+# For now, remove these from the dataset: since they don't match to the HIES dataset, none of them will have information on division, island, village, etc. 
+diet <- diet %>%
+  filter(interview__key %in% anaemia_no_match==FALSE)
+
 diet_long <- pivot_dat_i(hies_i = diet, id_cols = id_cols)
 diet_labels <- clean_data(diet, return = "var_labels") %>%
   mutate(dta_filename = diet_filename)
@@ -161,17 +178,17 @@ diet_labels <- clean_data(diet, return = "var_labels") %>%
 #   mutate(dta_filename = time_filename)
 
 # Add NSF Team data to hies_long
-hies_long <- hies_long %>% 
+hies_long_all <- hies_long %>% 
   bind_rows(anthropometry_long) %>%
   bind_rows(anaemia_long) %>%
   bind_rows(diet_long)
 
-hies_long_distinct <- hies_long %>%
+hies_long_distinct <- hies_long_all %>%
   select(-dta_file) %>%
   distinct() 
 
 ##############################################################
-# Step 3: Pivot  hies_long dataset to tidy format
+# Step 3: Pivot hies_long_distinct dataset to tidy format
 
 # FINAL TIDY FORMAT (each row is a single observation at the HOUSEHOLD LEVEL):
 hies_house_tidy <- hies_long_distinct %>%
