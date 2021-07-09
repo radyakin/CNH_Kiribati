@@ -1,3 +1,4 @@
+# Author: Kelvin Gorospe kdgorospe@gmail.com
 # This begins to clean some of the non-uniquely identified question_ids - still not finished
 # Clean and output tidy HIES data:
 # Clean, format, and output data as the starting point for all data requests
@@ -11,12 +12,12 @@ library(magrittr)
 # MacOS
 datadir <- "/Volumes/jgephart/Kiribati/Data"
 outdir <- "/Volumes/jgephart/Kiribati/Outputs"
-# Windows
-#datadir <- "K:/Kiribati/Data"
-#outdir <- "K:/Kiribati/Outputs"
+nsfdatadir <- "/Volumes/jgephart/Kiribati/Data/HIES-NSF-files"
 
 source("Data_cleaning/cleaning_functions.R")
 
+############################################################## 
+# Step 1: Read in and combine all HIES dta files
 hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
 
 # Only want the STATA .dta files
@@ -42,12 +43,20 @@ hies_labels_list <- lapply(hies_all, clean_data, return = "var_labels")
 
 hies_labels <- bind_rows(hies_labels_list, .id = "dta_file") # add .id so that if there are common col.names across dta files these can be matched to the specific col.label from that dta file
 
+# Join hies_labels with name of original DTA file
+dta_df <- data.frame(dta_filename = dta_files, dta_file = as.character(1:length(dta_files)))
+hies_labels <- hies_labels %>%
+  left_join(dta_df, by = "dta_file")
+
 # Find common data_cols to bind all data frames
 # Intersection of common data cols for first three data files
-id_cols <- intersect(intersect(hies_labels_list[[1]]$col.names, hies_labels_list[[2]]$col.names), hies_labels_list[[3]]$col.names)
+# This only works if only working with data in dta_files
+#id_cols <- intersect(intersect(hies_labels_list[[1]]$col.names, hies_labels_list[[2]]$col.names), hies_labels_list[[3]]$col.names)
+#id_cols <- c(id_cols, "hm_basic__id")
 
+# For incorporating NSF data, use only interview__key and hm_basic__id\
 # add hm_basic__id - any questions with NA for this is at the household level
-id_cols <- c(id_cols, "hm_basic__id")
+id_cols <- c("interview__key", "hm_basic__id")
 
 # Reminder - Don't add additional columns like below, this creates duplicate rows of NAs for interview__id in downstream tidy format
 # add other columns as ID columns: hm_basic__id, interview__id, hhld_id, team_id, interviewer_id
@@ -70,13 +79,16 @@ hies_long_list <- lapply(hies_all_clean, function(i){pivot_dat_i(hies_i = i, id_
 # Column dta_file corresponds to filename in dta_files; keep this column until we're sure all col.names and col.labels are standardized (see code in manual cleaning section below)
 hies_long <- bind_rows(hies_long_list, .id = "dta_file") 
 
+##############################################################
+# Step 2: Read in NSF questions and add to HIES dataset:
+# Incorporate NSF data sent in a separate email from Mike (stored in nsfdatadir) - add to hies_labels, hies_long, AND hies_tidy
 
-
-##### ADDENDUM to HIES dataset:
-# Incorporate anthropometry data sent in a separate email from Mike - add to hies_labels, hies_long, AND hies_tidy
+####
+# Anthropometry data: 
 # Note: removing sensitive PII data: birth_d, birth_m, birth_y, and name!
 # All other columns (p105 through p114) are already in hies_long, so only need to get age_m column
-anthropometry <- read_dta(file.path(datadir, "20210624_HIES-metadata", "KIR_2019_HIES_s1Demo_characteristics.dta")) %>% 
+anthropometry_filename <- "KIR_2019_HIES_s1Demo_characteristics.dta"
+anthropometry <- read_dta(file.path(nsfdatadir, anthropometry_filename)) %>% 
   clean_data(return = "df") %>%
   # Assemble birthday columns into a single column
   mutate(birthday_paste = paste(birth_y, birth_m, birth_d, sep = "-")) %>% 
@@ -98,7 +110,7 @@ anthropometry <- read_dta(file.path(datadir, "20210624_HIES-metadata", "KIR_2019
   select(any_of(c("interview__key", "hm_basic__id", "age_m", "age_mo_start", "age_mo_end", "start_pers_details", "end_pers_details"))) %>%
   # note: anthropometry only contains interview__key and hm_basic__id - Bind to hies_long to get other id_cols 
   mutate(hm_basic__id = as.character(hm_basic__id)) %>%
-  left_join(hies_long %>% select(id_cols) %>% distinct(), by = c("interview__key", "hm_basic__id"))
+  left_join(hies_long %>% select(all_of(id_cols)) %>% distinct(), by = c("interview__key", "hm_basic__id"))
 
 anthropometry_long <- pivot_dat_i(hies_i = anthropometry, id_cols = id_cols)
 
@@ -108,100 +120,58 @@ anthro_labels <- clean_data(anthropometry, return = "var_labels") %>%
   # Define labels for calculated columns
   mutate(col.labels = case_when(col.names=="age_mo_start" ~ "calculated age in months from interview start date",
                                 col.names=="age_mo_end" ~ "calculated age in months from interview end date",
-                                TRUE ~ col.labels))
+                                TRUE ~ col.labels)) %>%
+  mutate(dta_filename = anthropometry_filename)
 
+
+####
+# Anaemia data: 
+anaemia_filename <- "anaemia.dta"
+anaemia <- read_dta(file.path(nsfdatadir, anaemia_filename)) %>% 
+  clean_data(return = "df")
+anaemia_long <- pivot_dat_i(hies_i = anaemia, id_cols = id_cols)
+anaemia_labels <- clean_data(anaemia, return = "var_labels") %>%
+  mutate(dta_filename = anaemia_filename)
+
+####
+# Diet recall data: 
+diet_filename <- "dietary_recall.dta"
+diet <- read_dta(file.path(nsfdatadir, diet_filename)) %>% 
+  clean_data(return = "df")
+diet_long <- pivot_dat_i(hies_i = diet, id_cols = id_cols)
+diet_labels <- clean_data(diet, return = "var_labels") %>%
+  mutate(dta_filename = diet_filename)
+
+####
+# Healthy living data: Note: already part of SPC_KIR_2019_HIES_o26-HealthyLiving_v01.dta so no need to incorporate this into hies_tidy
+# health_filename <- "healthy_living.dta"
+# health <- read_dta(file.path(nsfdatadir, health_filename)) %>% 
+#   clean_data(return = "df")
+# health_long <- pivot_dat_i(hies_i = health, id_cols = id_cols)
+# health_labels <- clean_data(health, return = "var_labels") %>%
+#   mutate(dta_filename = health_filename)
+
+####
+# Time use data: Note: already part of SPC_KIR_2019_HIES_o26-HealthyLiving_v01.dta so no need to incorporate this into hies_tidy
+# time_filename <- "time_use.dta"
+# time <- read_dta(file.path(nsfdatadir, time_filename)) %>% 
+#   clean_data(return = "df")
+# time_long <- pivot_dat_i(hies_i = time, id_cols = id_cols)
+# time_labels <- clean_data(time, return = "var_labels")  %>%
+#   mutate(dta_filename = time_filename)
+
+# Add NSF Team data to hies_long
 hies_long <- hies_long %>% 
-  bind_rows(anthropometry_long)
-
-hies_labels <- hies_labels %>%
-  bind_rows(anthro_labels)
-
-######
-
-# Exploring the data:
-# hies_long was created by joining columns that were unique to ALL data files, but there are still columns that are unique to just subsets of data files
-# i.e., for a given interview, there are still duplicate question_id's
-# Compare non-unique and unique question_id's
-# hies_long %>%
-#   filter(interview__key == "00-01-31-37") %>%
-#   pull(question_id) %>%
-#   length()
-# 
-# hies_long %>%
-#   filter(interview__key == "00-01-31-37") %>%
-#   pull(question_id) %>%
-#   unique() %>%
-#   length()
-
-
-# Which col.names have duplicate col.labels
-hies_no_dta_file <- hies_labels %>% 
-  select(-dta_file) %>%
-  unique() %>%
-  arrange(col.names)
-non_standard_col_names <- as.data.frame(table(hies_no_dta_file$col.names)) %>%
-  filter(Freq>1) %>%
-  pull(Var1)
-
-hies_no_dta_file %>%
-  filter(col.names %in% non_standard_col_names) %>%
-  unique()
-
-hies_labels %>%
-  filter(col.names == "annual_amount_clean")
-
-hies_labels %>%
-  filter(col.names == "fweight")
-
-hies_labels %>%
-  filter(col.names == "hm_basic__id")
-
-hies_labels %>%
-  filter(col.names == "interview__key")
-
-########## IMPORTANT: MANUAL CLEANING SECTION
-# MANUALLY CLEAN non_standard_col_names to be consistent throughout both hies_labels and hies_long
-# fweight, hm_basic__id, and interview__key should all be the same col.label
-# annual_amount_clean looks like the only col.name that is duplicated and should be renamed (expenditure vs income)
-
-hies_labels_clean <- hies_labels %>%
-  mutate(col.labels = case_when(col.names == "fweight" ~ "final sample hh weight",
-                                col.names == "hm_basic__id" ~ "id in hm_basic",
-                                col.names == "interview__key" ~ "interview key (identifier in xx-xx-xx-xx format)",
-                                TRUE ~ col.labels)) #%>%
-# No longer need to clean these columns if dealing with IncomeAggreg and ExpenditureAggreg separately
-  # mutate(col.names = case_when(col.names == "annual_amount_clean" & col.labels == "cleaned annualised expenditure" ~ "annual_amount_clean_expenditure",
-  #                              col.names == "annual_amount_clean" & col.labels == "cleaned annualised income" ~ "annual_amount_clean_income",
-  #                              TRUE ~ col.names))
-
-# Mutate question_id in hies_long to match the changes made in hies_labels_clean col.names
-# hies_long_clean <- hies_long %>%
-#   mutate(question_id = case_when(question_id == "annual_amount_clean" & dta_file == "25" ~ "annual_amount_clean_expenditure",
-#                                  question_id == "annual_amount_clean" & dta_file == "26" ~ "annual_amount_clean_income",
-#                                  TRUE ~ question_id))
-
-# Check that all col.names have a unique col.label
-hies_clean_no_dta_file <- hies_labels_clean %>% 
-  select(-dta_file) %>%
-  unique() %>%
-  arrange(col.names)
-
-non_standard_col_names <- as.data.frame(table(hies_clean_no_dta_file$col.names)) %>%
-  filter(Freq>1) %>%
-  pull(Var1)
-
-non_standard_col_names # EMPTY
-
-# Now that hies_labels_clean is standardized, we can remove dta_file and use distinct() to remove duplicate questions across data files
-hies_labels_distinct <- hies_labels_clean %>%
-  select(-dta_file) %>%
-  distinct() 
+  bind_rows(anthropometry_long) %>%
+  bind_rows(anaemia_long) %>%
+  bind_rows(diet_long)
 
 hies_long_distinct <- hies_long %>%
   select(-dta_file) %>%
-  distinct() # Shrinks from 8,900,000 to 4,500,000 rows
+  distinct() 
 
-######
+##############################################################
+# Step 3: Pivot  hies_long dataset to tidy format
 
 # FINAL TIDY FORMAT (each row is a single observation at the HOUSEHOLD LEVEL):
 hies_house_tidy <- hies_long_distinct %>%
@@ -215,43 +185,24 @@ hies_individ_tidy <- hies_long_distinct %>%
   pivot_wider(names_from = question_id, values_from = value) %>%
   arrange(interview__key)
 
+##############################################################
+# Step 4: Clean data files that do not pivot to tidy:
+# These are the files in dta_files_not_pivoting_tidy
+# Note: these are not incorporated into hies_long
 
-########################################
-# DATA CHECK: 
-# Check hies_house_tidy
-# data.frame(table(interview__key = hies_house_tidy$interview__key)) %>% filter(Freq > 1)
-# 
-# # Check hies_individ_tidy: i.e., any rows with repeated interview__key should have different hm_basic__id
-# # Unique length of full_id should be same as nrows (hies_individ_tidy)
-# hies_individ_tidy %>%
-#   mutate(full_id = paste(interview__key, hm_basic__id, sep = "")) %>%
-#   pull(full_id) %>%
-#   unique() %>%
-#   length()
-########################################
-
-# SHORT ANSWERS FOR TRANSLATION:
-# FIRST, create FULL long format
-# Join with hies_labels_distinct for question context (helpful for translation)
-hies_alpha <- hies_long_distinct %>%
-  filter(str_detect(value, pattern = "[:alpha:]")) %>% # response has text (i.e., alpha) 
-  # "FIND" the word "text" in the PDF HIES survey to get all the question_id's for the fill-in-the-blanks
-  # ...and question_id ends with either an "n", "n1", "n2", "n3", "n4", "e" (e.g., p903n, h1801n2, h1122e) OR contains an "oth"
-  filter((str_detect(question_id, pattern = "n$|n1$|n2$|n3$|n4$|e$") | str_detect(question_id, pattern = "oth") | question_id %in% c("nonfinfish_consump", "travel_time_within"))) %>% 
-  # REMOVE FALSE MATCHES:
-  filter(question_id %in% c("copra_increase", "copra_motivation", "desc_2001e", "interview_type", "reason_replace", "sitting_at_home")==FALSE) %>%
-  left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
-  select(question_id, value, col.labels) %>%
-  unique() %>%
-  arrange(question_id)
-
-# Output each of the files in dta_files_not_pivoting_tidy separately - extract attributes with clean_data
-agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta")) %>% clean_data(return = "df")
-agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta")) %>% clean_data(return = "df")
-agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta")) %>% clean_data(return = "df")
-expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta")) %>% clean_data(return = "df")
-income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta")) %>% clean_data(return = "df")
-# NOTE: Already checked, and none of the data in the dta_files_not_pivoting_tidy files require translations (no fill-in-the-blanks)
+veg_filename <- "SPC_KIR_2019_HIES_19b-AgricVegetables_v01.dta"
+root_filename <- "SPC_KIR_2019_HIES_19c-AgricRootCrop_v01.dta"
+fruit_filename <- "SPC_KIR_2019_HIES_19d-AgricFruit_v01.dta"
+expend_filename <- "SPC_KIR_2019_HIES_30-ExpenditureAggreg_v01.dta"
+income_filename <- "SPC_KIR_2019_HIES_40-IncomeAggreg_v01.dta"
+agric_veg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", veg_filename)) %>% clean_data(return = "df")
+agric_root <- read_dta(file.path(datadir, "20210301_HIES_FINAL", root_filename)) %>% clean_data(return = "df")
+agric_fruit <- read_dta(file.path(datadir, "20210301_HIES_FINAL", fruit_filename)) %>% clean_data(return = "df")
+expend_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", expend_filename)) %>% clean_data(return = "df")
+income_agg <- read_dta(file.path(datadir, "20210301_HIES_FINAL", income_filename)) %>% clean_data(return = "df")
+# NOTE: None of the data in the dta_files_not_pivoting_tidy files require translations:
+# veg, root, and fruit do not have fill-in-the-blank answers
+# and expend and income data are joined with PNDB code below which serves as a translation
 
 # SPC data team have already worked to standardize units in the Expenditure and Income files - remove all non-standard unit columns
 # These columns should be removed as per Mike Sharpe
@@ -293,13 +244,21 @@ expend_agg <- expend_agg %>%
 income_agg <- income_agg %>%
   select(!all_of(non_standard_columns))
 
+# Pivot all dta_files_not_pivoting_tidy to long and combine with hies_long_distinct
+veg_long <- pivot_dat_i(hies_i = agric_veg, id_cols = id_cols)
+root_long <- pivot_dat_i(hies_i = agric_root, id_cols = id_cols)
+fruit_long <- pivot_dat_i(hies_i = agric_fruit, id_cols = id_cols)
+expend_long <- pivot_dat_i(hies_i = expend_agg, id_cols = id_cols)
+income_long <- pivot_dat_i(hies_i = income_agg, id_cols = id_cols)
 
 #### ADDENDUM to income and expenditure data
 # Incorporate PNDB metadata sent in a separate email from Mike
 # Left join pndb_meta to expend_agg and income_agg (pndb_meta contains nutritional info and descriptions for ALL pndb codes, don't need to full join all of these, just left join to the data points in expend_agg and income_agg)
 # Columns: Food_description and food_desc_pndb can be used as coded "translations" of the fill-in-the-blank responses
 # Some of the entries in pndb_meta are blank PNDB codes... filter these out before left-joining
-pndb_meta <- read_dta(file.path(datadir, "20210624_HIES-metadata", "PNDB_17May2020.dta")) %>% clean_data(return = "df") %>% rename(pndbcode = PNDBCode)
+pndb_filename <- "PNDB_17May2020.dta"
+pndb_meta <- read_dta(file.path(nsfdatadir, pndb_filename)) %>% clean_data(return = "df") %>% rename(pndbcode = PNDBCode)
+pndb_long <- pivot_dat_i(hies_i = pndb_meta, id_cols = id_cols)
 
 income_agg <- income_agg %>%
   left_join(pndb_meta %>% filter(pndbcode %in% c("", "..")==FALSE) %>% distinct(), by = "pndbcode") # need distinct() for pndb_meta - some rows are duplicates
@@ -307,38 +266,129 @@ income_agg <- income_agg %>%
 expend_agg <- expend_agg %>%
   left_join(pndb_meta %>% filter(pndbcode %in% c("", "..")==FALSE) %>% distinct(), by = "pndbcode") # need distinct() for pndb_meta - some rows are duplicates
 
-# Get fill in the blank responses for expenditure and income datasets ("description" column)
-# No longer necessary since these are "translated" / coded in the PNDB addendum
-# expend_alpha <- expend_agg %>%
-#   select(all_of(c("description", "coicop"))) %>%
-#   distinct()
-# 
-# income_alpha <- income_agg %>%
-#   select(all_of(c("description", "coicop"))) %>%
-#   distinct()
-
-
 # get variable labels for each of the files in dta_file_not_pivoting_tidy
-veg_labels <- clean_data(agric_veg, return = "var_labels")
-root_labels <- clean_data(agric_root, return = "var_labels")
-fruit_labels <- clean_data(agric_fruit, return = "var_labels")
-expend_labels <- clean_data(expend_agg, return = "var_labels")
-income_labels <- clean_data(income_agg, return = "var_labels")
+veg_labels <- clean_data(agric_veg, return = "var_labels") %>%
+  mutate(dta_filename = veg_filename)
+root_labels <- clean_data(agric_root, return = "var_labels") %>%
+  mutate(dta_filename = root_filename)
+fruit_labels <- clean_data(agric_fruit, return = "var_labels") %>%
+  mutate(dta_filename = fruit_filename)
+expend_labels <- clean_data(expend_agg, return = "var_labels") %>%
+  mutate(dta_filename = expend_filename)
+income_labels <- clean_data(income_agg, return = "var_labels") %>%
+  mutate(dta_filename = income_filename)
 
 # Get var_labels for pndb columns
-pndb_labels <- clean_data(pndb_meta, return = "var_labels")
+pndb_labels <- clean_data(pndb_meta, return = "var_labels") %>%
+  mutate(dta_filename = pndb_filename)
 
-# Bind all column names and labels together for final output
-hies_labels_final <- hies_labels_distinct %>%
+############################################################## 
+# Step 5: Bind all long-format datasets together for final output
+
+hies_long_full <- hies_long_distinct %>%
+  bind_rows(veg_long) %>%
+  bind_rows(root_long) %>%
+  bind_rows(fruit_long) %>%
+  bind_rows(expend_long) %>%
+  bind_rows(income_long) %>%
+  bind_rows(pndb_long) %>%
+  distinct()
+
+############################################################## 
+# Step 6: Bind all column names and labels together for final output
+
+hies_labels_all <- hies_labels %>%
+  bind_rows(anthro_labels) %>%
+  bind_rows(anaemia_labels) %>%
+  bind_rows(diet_labels) %>%
   bind_rows(veg_labels) %>%
   bind_rows(root_labels) %>%
   bind_rows(fruit_labels) %>%
   bind_rows(expend_labels) %>%
   bind_rows(income_labels) %>%
+  bind_rows(pndb_labels) %>%
+  # Standardize col.labels as lowercase
+  mutate(col.labels = str_to_lower(col.labels))
+
+# Which col.names have duplicate col.labels
+hies_no_dta_file <- hies_labels_all %>% 
+  select(-c(dta_file, dta_filename)) %>%
+  unique() %>%
+  arrange(col.names)
+
+non_standard_col_names <- as.data.frame(table(hies_no_dta_file$col.names)) %>%
+  filter(Freq>1) %>%
+  pull(Var1)
+
+hies_no_dta_file %>%
+  filter(col.names %in% non_standard_col_names) %>%
+  unique()
+
+hies_labels_all %>%
+  filter(col.names == "fweight")
+
+hies_labels_all %>%
+  filter(col.names == "hm_basic__id")
+
+hies_labels_all %>%
+  filter(col.names == "interview__key")
+
+hies_labels_all %>%
+  filter(col.names == "pndbcode")
+
+hies_labels_all %>%
+  filter(col.names == "rururb")
+
+########## IMPORTANT: MANUAL CLEANING SECTION
+# MANUALLY CLEAN non_standard_col_names to be consistent throughout both hies_labels and hies_long
+# fweight, hm_basic__id, and interview__key should all be the same col.label
+# annual_amount_clean looks like the only col.name that is duplicated and should be renamed (expenditure vs income)
+
+hies_labels_clean <- hies_labels_all %>%
+  mutate(col.labels = case_when(col.names == "fweight" ~ "final sample hh weight",
+                                col.names == "hm_basic__id" ~ "id in hm_basic",
+                                col.names == "interview__key" ~ "interview key (identifier in xx-xx-xx-xx format)",
+                                col.names == "pndbcode" ~ "pacific nutrient database code (string)",
+                                col.names == "rururb" ~ "urban - rural",
+                                TRUE ~ col.labels)) 
+
+# Check that all col.names have a unique col.label
+hies_clean_no_dta_file <- hies_labels_clean %>% 
+  select(-c(dta_file, dta_filename)) %>%
+  unique() %>%
+  arrange(col.names)
+
+non_standard_col_names <- as.data.frame(table(hies_clean_no_dta_file$col.names)) %>%
+  filter(Freq>1) %>%
+  pull(Var1)
+
+non_standard_col_names # EMPTY
+
+# Now that hies_labels_clean is standardized, we can remove dta_file and use distinct() to remove duplicate questions across data files
+hies_labels_distinct <- hies_labels_clean %>%
+  select(-dta_file) %>%
   distinct() %>%
   arrange(col.names)
 
-# Outputs:
+##############################################################
+# Step 7: Identify fill-in-the-blank answers that may require translation
+
+# Only do this for hies_long_distinct - before hies_long was joined with data files that do not pivot tidy (only these have fill in the blank answers)
+# Then join with hies_labels_distinct for question context (helpful for translation)
+hies_alpha <- hies_long_distinct %>%
+  filter(str_detect(value, pattern = "[:alpha:]")) %>% # response has text (i.e., alpha) 
+  # "FIND" the word "text" in the PDF HIES survey to get all the question_id's for the fill-in-the-blanks
+  # ...and question_id ends with either an "n", "n1", "n2", "n3", "n4", "e" (e.g., p903n, h1801n2, h1122e) OR contains an "oth"
+  filter((str_detect(question_id, pattern = "n$|n1$|n2$|n3$|n4$|e$") | str_detect(question_id, pattern = "oth") | question_id %in% c("nonfinfish_consump", "travel_time_within"))) %>% 
+  # REMOVE FALSE MATCHES:
+  filter(question_id %in% c("copra_increase", "copra_motivation", "desc_2001e", "interview_type", "reason_replace", "sitting_at_home")==FALSE) %>%
+  left_join(hies_labels_distinct, by = c("question_id" = "col.names")) %>%
+  select(question_id, value, col.labels) %>%
+  unique() %>%
+  arrange(question_id)
+
+############################################################## 
+# Step 8: Outputs
 # Final long format of all uniquely identified questions: hies_long_distinct - read in all dataframes in list dta_file: pivot long, combine by columns unique to ALL data files, remove duplicate questions (common to subsets of data files)
 # Final tidy formats at the household (hies_house_tidy) and individual (hies_individ_tidy) levels
 # Key for matching col.names (question_id in hies) to col.labels: hies_labels_final
@@ -347,11 +397,11 @@ hies_labels_final <- hies_labels_distinct %>%
 
 file.date <- Sys.Date() # add file.date to all outputs to keep track of most recent versions
 
-# Standard HIES dataset
-write.csv(hies_long_distinct, file = file.path(outdir, paste(file.date, "_hies_long_qs-with-unique-ids.csv", sep = "")), row.names = FALSE)
+# Standard HIES dataset that is able to pivot tidy
+write.csv(hies_long_full, file = file.path(outdir, paste(file.date, "_hies_long_qs-with-unique-ids.csv", sep = "")), row.names = FALSE)
 write.csv(hies_house_tidy, file = file.path(outdir, paste(file.date, "_hies_tidy_household-level.csv", sep = "")), row.names = FALSE)
 write.csv(hies_individ_tidy, file = file.path(outdir, paste(file.date, "_hies_tidy_individual-level.csv", sep = "")), row.names = FALSE)
-write.csv(hies_labels_final, file = file.path(outdir, paste(file.date, "_hies_question-id-to-label-key.csv", sep = "")), row.names = FALSE)
+write.csv(hies_labels_distinct, file = file.path(outdir, paste(file.date, "_hies_question-id-to-label-key.csv", sep = "")), row.names = FALSE)
 write.csv(hies_alpha, file = file.path(outdir, paste(file.date, "_hies_text-responses-for-translation.csv", sep = "")), row.names = FALSE)
 
 # HIES questions related to expenditures and income (pre-processed by SPC data team)
