@@ -183,9 +183,11 @@ hies_long_all <- hies_long %>%
   bind_rows(anaemia_long) %>%
   bind_rows(diet_long)
 
+# apply distinct() to hies_long and clean village names
 hies_long_distinct <- hies_long_all %>%
   select(-dta_file) %>%
-  distinct() 
+  distinct() %>%
+  mutate(value = if_else(question_id == "village", true = gsub("^.*- ", "", value), false = value)) # Remove the ID number and hyphen before each village name
 
 ##############################################################
 # Step 3: Pivot hies_long_distinct dataset to tidy format
