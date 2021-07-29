@@ -21,16 +21,13 @@ source("Data_cleaning/cleaning_functions.R")
 hies_files <- list.files(file.path(datadir, "20210301_HIES_FINAL"))
 
 # Only want the STATA .dta files
-# Some files have v01 and v02 - these are the same datasets but organized differently (v01 - household level and v02 - transaction level?)
-# Keep only v01 for now - household level seems to be how data is organized throughout
+# For some files .dta files there is a v01 and v02 - these are the same datasets but organized differently (v01 - household level and v02 - transaction level?)
+# Keep only v01 - household level
 all_dta_files <- hies_files[grep(pattern = "\\v01.dta", hies_files)] 
 
-# Deal with these files separately
+# Deal with these files separately (transaction-level data, therefore does not pivot tidy with household and individual-level data)
 dta_files <- all_dta_files[!grepl(pattern = "AgricVegetables|AgricRootCrop|AgricFruit|IncomeAggreg|ExpenditureAggreg", all_dta_files)]
 dta_files_not_pivoting_tidy <- all_dta_files[grepl(pattern = "AgricVegetables|AgricRootCrop|AgricFruit|IncomeAggreg|ExpenditureAggreg", all_dta_files)]
-
-# for all dta files
-# dta_files <- hies_files[grep(pattern = "\\.dta", hies_files)] 
 
 # lapply read_dta 
 hies_all <- lapply(dta_files, function(i){read_dta(file.path(datadir, "20210301_HIES_FINAL", i))})
@@ -48,29 +45,10 @@ dta_df <- data.frame(dta_filename = dta_files, dta_file = as.character(1:length(
 hies_labels <- hies_labels %>%
   left_join(dta_df, by = "dta_file")
 
-# Find common data_cols to bind all data frames
-# Intersection of common data cols for first three data files
-# This only works if only working with data in dta_files
-#id_cols <- intersect(intersect(hies_labels_list[[1]]$col.names, hies_labels_list[[2]]$col.names), hies_labels_list[[3]]$col.names)
-#id_cols <- c(id_cols, "hm_basic__id")
-
-# For incorporating NSF data, use only interview__key and hm_basic__id\
-# add hm_basic__id - any questions with NA for this is at the household level
+# For joining NSF data, use only interview__key and hm_basic__id
+# any questions with NA for hm_basic__id is a household level question
+# Reminder - adding additional ID columns (e.g.,"interview__id", "hhld_id", "team_id", "interviewer_id") creates duplicate rows of NAs in downstream tidy format
 id_cols <- c("interview__key", "hm_basic__id")
-
-# Reminder - Don't add additional columns like below, this creates duplicate rows of NAs for interview__id in downstream tidy format
-# add other columns as ID columns: hm_basic__id, interview__id, hhld_id, team_id, interviewer_id
-#id_cols <- c(id_cols, "hm_basic__id", "interview__id", "hhld_id", "team_id", "interviewer_id")
-
-# Original IRS data request
-# hies_40 <- read_dta(file.path(datadir, "20210301_HIES_FINAL", dta_files[unlist(lapply(data_cols, str_detect, "p907"))]))
-# Current output format of read_dta (hies_40) WILL write out to a CSV but only the value (not the label) e.g., 1, 2, 3, 4, etc but not the corresponding text label S Tarawa, Northern, Central, Southern, etc.
-
-# Pivot long based on id_cols
-# hies_40_long <- hies_40 %>%
-#   mutate(across(where(is.numeric), as.character)) %>% # Mutate all columns to be character so all questions (numeric or character) can be combined into a single long pivot column
-#   pivot_longer(cols = !all_of(c(id_cols)), names_to = "question_id") %>% 
-#   filter(is.na(value)==FALSE) # Remove questions with NA responses
 
 # Pivot long with pivot_dat_i
 # lapply pivot function to all hies_all
@@ -80,7 +58,7 @@ hies_long_list <- lapply(hies_all_clean, function(i){pivot_dat_i(hies_i = i, id_
 hies_long <- bind_rows(hies_long_list, .id = "dta_file") 
 
 ##############################################################
-# Step 2: Read in NSF questions and add to HIES dataset:
+# Step 2: Read in NSF-specific questions and add to HIES dataset:
 # Incorporate NSF data sent in a separate email from Mike (stored in nsfdatadir) - add to hies_labels, hies_long, AND hies_tidy
 
 ####
@@ -102,9 +80,12 @@ anthropometry <- read_dta(file.path(nsfdatadir, anthropometry_filename)) %>%
   mutate(end_date = as.Date(end_date, "%Y-%m-%d")) %>%
   mutate(start_date = as.Date(start_date, "%Y-%m-%d")) %>%
   # NOTE: In some cases there are as many as four years between the start and end dates. In addition, there appears to be errors in start and end dates (sometimes end date comes before start date)
-  # Related to the issues with start/end date, will calculate age in months as both start date minus birthday and end date minus birthday
+  # Related to the issues with start/end date, will calculate age as both start date minus birthday and end date minus birthday
+  # As per Simone, calculate both age in months and age in days as required for certain anthropometry analyses
   # Difference in dates is reported in "days"; multiply by 12/365 to get number of months
-  mutate(age_mo_start = as.numeric((start_date - birthday_yyyy_mm_dd)*12/365),
+  mutate(age_d_start = as.numeric(start_date - birthday_yyyy_mm_dd),
+         age_d_end = as.numeric(end_date - birthday_yyyy_mm_dd),
+         age_mo_start = as.numeric((start_date - birthday_yyyy_mm_dd)*12/365),
          age_mo_end = as.numeric((end_date - birthday_yyyy_mm_dd)*12/365)) %>%
   # Drop all PII columns
   select(any_of(c("interview__key", "hm_basic__id", "age_m", "age_mo_start", "age_mo_end", "start_pers_details", "end_pers_details"))) %>%
@@ -112,8 +93,8 @@ anthropometry <- read_dta(file.path(nsfdatadir, anthropometry_filename)) %>%
   mutate(hm_basic__id = as.character(hm_basic__id)) %>%
   left_join(hies_long %>% select(all_of(id_cols)) %>% distinct(), by = c("interview__key", "hm_basic__id"))
 
-# Check to make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
-unique(anthropometry$interview__key)[unique(anthropometry$interview__key) %in% unique(hies_long$interview__key)==FALSE] # should be empty
+# Data check: make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+# unique(anthropometry$interview__key)[unique(anthropometry$interview__key) %in% unique(hies_long$interview__key)==FALSE] # should be empty
 
 anthropometry_long <- pivot_dat_i(hies_i = anthropometry, id_cols = id_cols)
 
@@ -121,11 +102,12 @@ anthro_labels <- clean_data(anthropometry, return = "var_labels") %>%
   # Mutate str_to_lower to match all other var_labels
   mutate(col.labels = str_to_lower(col.labels)) %>%
   # Define labels for calculated columns
-  mutate(col.labels = case_when(col.names=="age_mo_start" ~ "calculated age in months from interview start date",
+  mutate(col.labels = case_when(col.names == "age_d_start" ~ "calculated age in days from interview start date",
+                                col.names == "age_d_end" ~ "calculated age in days from interview end date",
+                                col.names=="age_mo_start" ~ "calculated age in months from interview start date",
                                 col.names=="age_mo_end" ~ "calculated age in months from interview end date",
                                 TRUE ~ col.labels)) %>%
   mutate(dta_filename = anthropometry_filename)
-
 
 ####
 # Anaemia data: 
@@ -133,9 +115,10 @@ anaemia_filename <- "anaemia.dta"
 anaemia <- read_dta(file.path(nsfdatadir, anaemia_filename)) %>% 
   clean_data(return = "df")
 
-# Check to make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+# Data check: make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
 anaemia_no_match <- unique(anaemia$interview__key)[unique(anaemia$interview__key) %in% unique(hies_long$interview__key)==FALSE]
-# For now, remove these from the dataset: since they don't match to the HIES dataset, none of them will have information on division, island, village, etc. 
+
+# For now, remove these from the dataset: since they don't match to the HIES dataset
 anaemia <- anaemia %>%
   filter(interview__key %in% anaemia_no_match==FALSE)
 
@@ -149,9 +132,9 @@ diet_filename <- "dietary_recall.dta"
 diet <- read_dta(file.path(nsfdatadir, diet_filename)) %>% 
   clean_data(return = "df")
 
-# Check to make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+# Data check: make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
 diet_no_match <- unique(diet$interview__key)[unique(diet$interview__key) %in% unique(hies_long$interview__key)==FALSE]
-# For now, remove these from the dataset: since they don't match to the HIES dataset, none of them will have information on division, island, village, etc. 
+# For now, remove these from the dataset
 diet <- diet %>%
   filter(interview__key %in% anaemia_no_match==FALSE)
 
@@ -159,7 +142,7 @@ diet_long <- pivot_dat_i(hies_i = diet, id_cols = id_cols)
 diet_labels <- clean_data(diet, return = "var_labels") %>%
   mutate(dta_filename = diet_filename)
 
-####
+#### Other files in the NSF folder:
 # Healthy living data: Note: already part of SPC_KIR_2019_HIES_o26-HealthyLiving_v01.dta so no need to incorporate this into hies_tidy
 # health_filename <- "healthy_living.dta"
 # health <- read_dta(file.path(nsfdatadir, health_filename)) %>% 
@@ -271,8 +254,8 @@ expend_long <- pivot_dat_i(hies_i = expend_agg, id_cols = id_cols)
 income_long <- pivot_dat_i(hies_i = income_agg, id_cols = id_cols)
 
 #### ADDENDUM to income and expenditure data
-# Incorporate PNDB metadata sent in a separate email from Mike
-# Left join pndb_meta to expend_agg and income_agg (pndb_meta contains nutritional info and descriptions for ALL pndb codes, don't need to full join all of these, just left join to the data points in expend_agg and income_agg)
+# Incorporate PNDB metadata
+# Left join pndb_meta to expend_agg and income_agg (pndb_meta contains nutritional info and descriptions for ALL pndb codes)
 # Columns: Food_description and food_desc_pndb can be used as coded "translations" of the fill-in-the-blank responses
 # Some of the entries in pndb_meta are blank PNDB codes... filter these out before left-joining
 pndb_filename <- "PNDB_17May2020.dta"
@@ -304,6 +287,7 @@ pndb_labels <- clean_data(pndb_meta, return = "var_labels") %>%
 ############################################################## 
 # Step 5: Bind all long-format datasets together for final output
 
+# FINAL LONG FORMAT
 hies_long_full <- hies_long_distinct %>%
   bind_rows(veg_long) %>%
   bind_rows(root_long) %>%
@@ -339,30 +323,12 @@ non_standard_col_names <- as.data.frame(table(hies_no_dta_file$col.names)) %>%
   filter(Freq>1) %>%
   pull(Var1)
 
-hies_no_dta_file %>%
-  filter(col.names %in% non_standard_col_names) %>%
-  unique()
+# These are the col.names with inconsistent col.labels
+# hies_no_dta_file %>%
+#   filter(col.names %in% non_standard_col_names) %>%
+#   unique()
 
-hies_labels_all %>%
-  filter(col.names == "fweight")
-
-hies_labels_all %>%
-  filter(col.names == "hm_basic__id")
-
-hies_labels_all %>%
-  filter(col.names == "interview__key")
-
-hies_labels_all %>%
-  filter(col.names == "pndbcode")
-
-hies_labels_all %>%
-  filter(col.names == "rururb")
-
-########## IMPORTANT: MANUAL CLEANING SECTION
-# MANUALLY CLEAN non_standard_col_names to be consistent throughout both hies_labels and hies_long
-# fweight, hm_basic__id, and interview__key should all be the same col.label
-# annual_amount_clean looks like the only col.name that is duplicated and should be renamed (expenditure vs income)
-
+# MANUALLY CLEAN non_standard_col_names
 hies_labels_clean <- hies_labels_all %>%
   mutate(col.labels = case_when(col.names == "fweight" ~ "final sample hh weight",
                                 col.names == "hm_basic__id" ~ "id in hm_basic",
@@ -383,6 +349,7 @@ non_standard_col_names <- as.data.frame(table(hies_clean_no_dta_file$col.names))
 
 non_standard_col_names # EMPTY
 
+# FINAL VARIABLE DESCRIPTIONS OUTPUT
 # Now that hies_labels_clean is standardized, we can remove dta_file and use distinct() to remove duplicate questions across data files
 hies_labels_distinct <- hies_labels_clean %>%
   select(-dta_file) %>%
