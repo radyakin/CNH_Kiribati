@@ -1,0 +1,23 @@
+Site,Lat,Long,Chain,Strata,HIES_SampleSize,Population,Development,Fisheries_UOW_support,Transport,Other_ecological_data
+Butaritari,3.12,172.8,Gilbert,Northern,72,3224,Medium,Yes,Base (flight in),Donner 2007 (n=8)
+Makin,3.37,172.99,Gilbert,Northern,41,1990,Low,Yes,Boat from Butaritari,No
+Marakei,1.98,173.28,Gilbert,Northern,58,2799,Low,No,Flight,Chan 2011 but only ciguateric fishes
+Abaiang,2,173,Gilbert,Northern,115,5568,Medium,Yes,Boat from Tarawa,"SPC 2004 fish, Donner 2007 (n=3), PROCFish 2008, Donner 2010 benthic (n=3)"
+N. Tarawa,1.43,173,Gilbert,Northern,130,6629,High,Yes,MFMRD from S. Tarawa,"Donner 2007 (n=6), Donner 2010 benthic (n=3)"
+S. Tarawa,1.43,173,Gilbert,Urban,437,56388,High,No,Base,"Donner 2007 (n=2), Donner 2010 benthic (n=2)"
+Betio (Tarawa),1.36,172.93,Gilbert,Urban,179,Incl. S. Tarawa,High,No,Car,No
+Maiana,0.93,173,Gilbert,Central,75,1982,Low,No,Boat from Tarawa,No
+Kuria,0.22,173.43,Gilbert,Central,41,1046,Low,No,Flight,PROCFish 2008
+Abemama,0.42,173.92,Gilbert,Central,113,3262,Low,Yes,Flight,PROCFish 2008
+Aranuka,0.19,173.63,Gilbert,Central,44,1125,Low,No,Flight,No
+Nonouti,-0.74,174.46,Gilbert,Southern,67,2734,Low,No,Flight,No
+Beru,-1.29,175.97,Gilbert,Southern,58,2051,Low,No,Flight,No
+N. Tabiteuea,-1.13,174.67,Gilbert,Southern,89,3955,Medium,Yes,Base (flight in),No
+S. Tabiteuea,-1.48,175.06,Gilbert,Southern,32,1306,Medium,No,Base,No
+Nikunau,-1.34,176.44,Gilbert,Southern,45,1789,Low,No,Flight,No
+Onotoa,-1.81,175.55,Gilbert,Southern,41,1393,Low,"No, difficult access",Flight,No
+Tamana,-2.51,175.99,Gilbert,Southern,24,1104,Low,No,Flight,Previous Kiribati Adaptation Program (?)
+Arorae,-2.63,176.82,Gilbert,Southern,27,1011,Low,"No, difficult access",Flight,No
+Teraina,4.68,-160.38,Line,Line group,49,1712,Low,No,Flight from Kiritimati,No
+Tabuaeran,3.87,-159.32,Line,Line group,70,2315,Medium,No,Flight from Kiritimati,"Scripps/Sandin/DeMartini 2008, McCauley sites 2012 - 2014"
+Kiritimati,1.87,-157.43,Line,Line group,170,6456,High,Yes,Base,"Scripps/Sandin/DeMartini 2008, PROCFish 2008"
