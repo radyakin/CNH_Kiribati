@@ -1,5 +1,6 @@
 # Code for finding questions by question_ID
 # Goal is to turn this into a function
+# Uses CSV file started by JAG that identifies how questions are linked together
 # Author: Kelvin D. Gorospe
 
 rm(list=ls())
