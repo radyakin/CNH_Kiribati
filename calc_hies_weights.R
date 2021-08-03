@@ -193,7 +193,8 @@ census_summary_check <- census_summary %>%
   arrange(division, island, village, ea_number)
 
 # The two datasets do not match:
-# FIX IT - Not sure why, but there's one extra EA in the household level census data
+# There's one extra EA in the household level census data
+# as per Mike, this EA corresponds to a hotel and can be ignored for generating population numbers
 setdiff(census_summary_check$ea_number, census_summary_2$ea_number)
 
 ######################################################################################

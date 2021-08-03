@@ -116,6 +116,7 @@ anaemia <- read_dta(file.path(nsfdatadir, anaemia_filename)) %>%
   clean_data(return = "df")
 
 # Data check: make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+# as per Mike, the following interview__key ID numbers had no responses to HIES questions. As a result, I removed them from the NSF datasets but one has the option to return to the raw NSF data and add them back in
 anaemia_no_match <- unique(anaemia$interview__key)[unique(anaemia$interview__key) %in% unique(hies_long$interview__key)==FALSE]
 
 # For now, remove these from the dataset: since they don't match to the HIES dataset
@@ -133,7 +134,9 @@ diet <- read_dta(file.path(nsfdatadir, diet_filename)) %>%
   clean_data(return = "df")
 
 # Data check: make sure all of the interview__key ID's can match (be joined with) to the standard HIES dataset
+# as per Mike, the following interview__key ID numbers had no responses to HIES questions. As a result, I removed them from the NSF datasets but one has the option to return to the raw NSF data and add them back in
 diet_no_match <- unique(diet$interview__key)[unique(diet$interview__key) %in% unique(hies_long$interview__key)==FALSE]
+
 # For now, remove these from the dataset
 diet <- diet %>%
   filter(interview__key %in% anaemia_no_match==FALSE)
