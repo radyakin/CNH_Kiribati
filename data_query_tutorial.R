@@ -141,7 +141,7 @@ h1503_query <- var_labels %>%
 
 # Subset h1508_all to just the data columns you're interested in
 h1503_all %>%
-  select(all_of(h1503_query))
+  select(all_of(c(h1503_query, "interview__key", "description", "food_desc_pndb", "coicop_class")))
 
 #########################################################
 # (c) Katy's diet recall query - p 124
