@@ -1,21 +1,74 @@
-# Start by loading df_tidy or var_labels
+# Examples for querying hies data
 # Change file.path directories as needed
 rm(list=ls())
 library(tidyverse)
 datadir <- "/Volumes/jgephart/Kiribati/Data"
 outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 
+# Start by loading df_tidy and/or var_labels
+hies_tidy <- read.csv(file = file.path(outdir, "2021-07-29_hies_tidy_individual-level.csv"))
+hies_tidy_house <- read.csv(file = file.path(outdir, "2021-07-29_hies_tidy_household-level.csv"))
+var_labels <- read.csv(file = file.path(outdir, "2021-07-29_hies_question-id-to-label-key.csv"))
+hies_long <- read.csv(file = file.path(outdir, "2021-07-29_hies_long_qs-with-unique-ids.csv")) # df long includes both household (hm_basic__id == NA) and individual-level responses
+hies_expenditure <- read.csv(file.path(outdir, "2021-07-29_hies_expenditures-standard-units.csv"))
 
-df_tidy <- read.csv(file = file.path(outdir, "hies_tidy_individual-level.csv"))
-var_labels <- read.csv(file = file.path(outdir, "hies_question-id-to-label-key.csv"))
+##############################################################################################################
+# Katy's examples:
+# P901-P925
+# P801-P803
+# P810
+# MIG_P9 == migrant_prev_work
+# Food recall from p. 81
+# Dietary recall from p. 124
+# HIES 1503 (all subquestions)
 
-# Set id_cols - these columns are shared across all individual-level surveys
+# Create a search pattern for all the question IDs that you're interested in
+p9s <- paste("p", 901:925, sep = "")
+p8s <- c(paste("p", 801:803, sep = ""), "p810")
+search_pattern <- paste(c(p9s, p8s, "migrant_prev_work"), collapse = "|")
+
+var_labels %>% 
+  filter(str_detect(col.names, search_pattern))
+
+# For food recall questions, query the expenditures dataset
+# Unlike hies_tidy, expenditures data (including food recall questions) are not tagged by question ID
+
+# Notice there are several sections included here:
+sort(unique(hies_expenditure$section))
+
+food_recall <- hies_expenditure %>%
+  filter(section == "21_foodrecall")
+
+# To get specific types of food recall:
+# (1) Filter by specific coicop_class
+unique(food_recall$coicop_class)
+
+# For food recall from page 81 of HIES, Roster: "Details on snacks, candies and confectionery", filter to coicop_class == "Sugar, jam, honey, chocolate and confectionery"
+# Use var_labels to get descriptions of columns in food_recall - cn use this to help decide which are relevant to your data query
+var_labels %>%
+  filter(col.names %in% names(food_recall))
+
+h1508 <- food_recall %>%
+  #filter(description %in% list_of_descriptions) %>% # if filtering by "Description"
+  filter(coicop_class == "Sugar, jam, honey, chocolate and confectionery")
+
+# The "description" column gives you the individual food recall items, including fill in the blank responses
+unique(h1508$description)
+
+# The food_desc_pndb is metadata joined to expenditures data that assigns category to each item (can serve as rough translation of some of the fill in the blank response)
+h1508 %>%
+  select(description, food_desc_pndb, coicop_class) %>%
+  arrange(description) %>%
+  distinct()
+
+##############################################################################################################
+# Jacob's examples:
+# HIES H13b1 (specifically responses 05, 06 and 07)
+# VRS VRS4_1 with associated VRS4_1a and VRS4_1b
+
+############################################################
+# Data query code from Indy's first data request
 id_cols <- c("interview__key",
-             "fweight",
-             "division",
-             "island",
-             "village",
-             "rururb",
              "hm_basic__id")
 
 # For non-roster questions, select column name
@@ -90,7 +143,7 @@ df_query <- df_tidy %>%
 # save df_query
 # write.csv(df_query, file = "insert-filename-here.csv")
 
-# For food recall questions: i.e., any questions beginning with "In the last 7 days....", query the expenditures dataset
+# For food recall questions, query the expenditures dataset
 hies_expenditure <- read.csv(file.path(outdir, "hies_expenditures-standard-units.csv"))
 
 # Notice there are several sections included here:
