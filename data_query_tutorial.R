@@ -1,4 +1,4 @@
-# Examples for querying hies data
+# Examples for querying HIES data
 # Change file.path directories as needed
 rm(list=ls())
 library(tidyverse)
