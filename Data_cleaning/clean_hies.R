@@ -88,7 +88,7 @@ anthropometry <- read_dta(file.path(nsfdatadir, anthropometry_filename)) %>%
          age_mo_start = as.numeric((start_date - birthday_yyyy_mm_dd)*12/365),
          age_mo_end = as.numeric((end_date - birthday_yyyy_mm_dd)*12/365)) %>%
   # Drop all PII columns
-  select(any_of(c("interview__key", "hm_basic__id", "age_m", "age_mo_start", "age_mo_end", "start_pers_details", "end_pers_details"))) %>%
+  select(any_of(c("interview__key", "hm_basic__id", "age_m", "age_mo_start", "age_mo_end", "age_d_start", "age_d_end", "start_pers_details", "end_pers_details"))) %>%
   # note: anthropometry only contains interview__key and hm_basic__id - Bind to hies_long to get other id_cols 
   mutate(hm_basic__id = as.character(hm_basic__id)) %>%
   left_join(hies_long %>% select(all_of(id_cols)) %>% distinct(), by = c("interview__key", "hm_basic__id"))
