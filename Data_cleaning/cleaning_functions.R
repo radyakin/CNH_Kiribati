@@ -1,8 +1,25 @@
 # Cleaning Functions
 
+###################################################################################################
+# FUNCTIONS USED IN clean_hies.R
+###################################################################################################
+
+# Simple function to pivot long based on id_cols
+
+pivot_dat_i <- function(hies_i, id_cols){
+  hies_i_long <- hies_i %>%
+    mutate(across(where(is.numeric), as.character)) %>% # Mutate all columns to be character so all questions (numeric or character) can be combined into a single long pivot column
+    pivot_longer(cols = !any_of(c(id_cols)), names_to = "question_id") %>% 
+    filter(is.na(value)==FALSE) %>% # Remove questions with NA responses
+    filter(value != "") # Remove questions with blank responses
+  
+  return(hies_i_long)
+}
 
 ###################################################################################################
-clean_data <- function(df){
+# FUNCTIONS USED IN PRELIMINARY PLOTTING (e.g., prelim_VRS_and_market_survey.Rmd)
+###################################################################################################
+clean_data <- function(df, return = "all"){
   var_labels <- data.frame(col.names = colnames(df), col.labels = NA)
   
   for(i in 1:length(colnames(df))){
@@ -16,16 +33,23 @@ clean_data <- function(df){
   df <- df %<>% 
     mutate_if(is.labelled, as_factor)
   
-  return(list(df = df, var_labels = var_labels))
+  if (return == "df"){
+    return(df)
+  }else if(return == "var_labels"){
+    return(var_labels)
+  }else if (return == "all"){
+    return(list(df = df, var_labels = var_labels))
+  }
 }
-
 
 ###################################################################################################
 
-tidy_data <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no = TRUE){
+# Function to pivot long and replace col.names with col.labels
+pivot_data_long <- function(df, pivot_col_1, pivot_col_last, var_labels, question_no = TRUE){
   
   not_all_na <- function(x) any(!is.na(x))
   
+  # question_no = TRUE applies to fisheries data where col.labels includes a third column for question.no
   if (question_no == TRUE){
     # Make tidy
     df_tidy <- df %>%

@@ -1,4 +1,6 @@
-# Clean market data
+# Clean and output tidy Market Survey data:
+# Clean, format, and output data as the starting point for all data requests
+# Reminder: keep cleaning and plotting code separate (for plotting, see prelim_VRS_and_market_survey_review.Rmd, etc)
 
 rm(list=ls())
 library(haven)
@@ -13,7 +15,7 @@ outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 #datadir <- "K:/Kiribati/Data"
 #outdir <- "K:/Kiribati/Outputs"
 
-source("R_scripts/cleaning_functions.R")
+source("Data_cleaning/cleaning_functions.R")
 
 #___________________________________________________________________________________________#
 # Clean market data
@@ -79,68 +81,27 @@ survey.info <- clean_data(survey.info)[[1]]
 survey.info <- survey.info %>%
   select("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")
 
-# Already Tidy:
-marketSurveyTidy <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
+# Tidy version
+market_tidy <- full_join(survey.info, marketSurvey, by = c("interview__key", "interview__id"))
 
-write.csv(marketSurveyTidy, file.path(outdir, "marketSurveyTidy.csv"), row.names=FALSE)
+# Long version
+market_long <- pivot_dat_i(market_tidy, id_cols = c("interview__key", "interview__id", "ms_island", "ms_village", "ea_market")) 
 
-#___________________________________________________________________________________________#
-# Other market survey outputs
-#___________________________________________________________________________________________#
+market_alpha <- market_long %>% 
+  filter(str_detect(value, "[:alpha:]")) %>% 
+  # Try sort(unique(market_alpha$question_id) to figure out which questions to filter
+  filter(question_id %in% c("availability_other", "other_units")) %>%
+  arrange(question_id) %>%
+  select(question_id, value) %>%
+  unique()
 
-# Output sample sizes:
-market_survey_sample_per_village <- marketSurveyTidy %>% 
-  group_by(ms_island, ms_village) %>%
-  summarise(n_market = length(unique(ea_market)), n_foods = length(unique(roster__id)))
 
-write.csv(market_survey_sample_per_village, file.path(outdir, "market_survey_sample_per_village.csv"), row.names=FALSE)
+# Outputs:
+# Final long format of all uniquely identified questions: market_long
+# Final tidy format: market_tidy
+# "Alpha" responses for translation: market_alpha
 
-# Output short answer responses for translation
-other_answers <- marketSurveyTidy %>%
-  filter(availability_other != "")
+write.csv(market_tidy, file.path(outdir, "market_tidy.csv"), row.names=FALSE)
+write.csv(market_long, file.path(outdir, "market_long.csv"), row.names=FALSE)
+write.csv(market_alpha, file.path(outdir, "market_text-responses-for-translation.csv"), row.names=FALSE)
 
-write.csv(other_answers, file.path(outdir, "marketSurvey_other_answers.csv"), row.names = FALSE)
-
-# Question for Mike: why are their duplicates in price information within marketSurveyTidy?
-market_survey_price_duplicates <- marketSurveyTidy %>% group_by(interview__id, roster__id, price, weight) %>% summarise(n=n()) %>% filter(n>1) %>% left_join(marketSurvey, by = c("interview__id", "roster__id", "price", "weight")) %>% ungroup() %>% select(-n) %>% arrange(interview__id)
-write.csv(market_survey_price_duplicates, file = file.path(outdir, "market_survey_price_duplicates.csv"), row.names = FALSE) # n = 68
-
-# FOODS WITH NO WEIGHT UNITS:
-market_survey_no_weight_unit <- marketSurveyTidy %>%
-  mutate(unit_roster__id = as.character(unit_roster__id)) %>%
-  filter(unit_roster__id %in% c("Bundle / Bunch / Pack", "Each / Piece", "Can / Bottle", "Box / Carton", "Bag", "Other units", "Bucket", "Plate / Bowl", "Basket") & is.na(unit_other))
-write.csv(market_survey_no_weight_unit, file = file.path(outdir, "market_survey_no_weight_unit.csv"), row.names = FALSE) # n = 1
-
-# FOODS WITH NO WEIGHT MEASUREMENT (usually things that are measured with unit_roster__id == Each/Piece usually also has an entry for weight and unit_other, but these do not)
-market_survey_no_weight <- marketSurveyTidy %>% 
-  filter(weight == 0)
-write.csv(market_survey_no_weight, file = file.path(outdir, "market_survey_no_weight.csv"), row.names = FALSE) # n = 17
-
-# FOODS with mixed units: note, can get this list by allowing print(food) to run in plot.food.prices function
-# mixed_units <- c("Cordial, syrup, not further specified",
-#                  "Cooking oil &amp; fats",
-#                  "Canned meat, corned beef",
-#                  "Chocolate in bars or in slabs",
-#                  "Toffees, pastilles and other confectionery products",
-#                  "Other non alcoholic beverages",
-#                  "Noodles, pasta",
-#                  "Other diary and oil product",
-#                  "Brown coconut",
-#                  "Chewing gum",
-#                  "Ice block, icies, ice frubu etc",
-#                  "Chinese sweets (mango skin, pawpaw skin etc",
-#                  "Ice cream",
-#                  "Bottled water/spring water/mineral water",
-#                  "Cola flavour soft drink eg. Coca cola/Pepsi",
-#                  "Soft drinks (Fizzy), eg. Sprite, 7 Up, Tonic, Fanta,",
-#                  "Fruit juice (apple, pineapple, tropical etc...)",
-#                  "Lollies",
-#                  "Ice cream cones",
-#                  "Other fruit (specify)"
-# )
-# 
-# market_survey_diff_units <- market_survey_price %>%
-#   filter(roster__id %in% mixed_units) %>%
-#   arrange(roster__id)
-# 
-# write.csv(market_survey_diff_units, file = file.path(outdir, "market_survey_diff_units.csv"), row.names = FALSE)

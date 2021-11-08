@@ -1,0 +1,31 @@
+Island Name,Island Chain,Strata,Community Name,Pop,Lat,Lon,Number of HH (n sampled),Number of Ind. (n sampled),Rank Reef Health,Rank Market Integration
+Butaritari,Gilbert,Northern,Tabonuea,253,3.54645,172.483414,12,55,High,Low
+Butaritari,Gilbert,Northern,Kuuma,290,3.102624,172.573764,12,57,High,Medium
+Butaritari,Gilbert,Northern,Ukiangang,579,3.3646,172.454512,24,133,High,High
+Abaiang,Gilbert,Northern,Taburao,268,1.511497,172.594933,12,69,Med,Low
+Abaiang,Gilbert,Northern,Tanimaiaki,354,1.45458,173.22696,12,53,Med,Medium
+Abaiang,Gilbert,Northern,Tuarabu,537,1.481118,173.214,12,70,Med,High
+N Tarawa,Gilbert,Central,Tearinibai,277,1.352168,172.58129,12,59,Low,Low
+N Tarawa,Gilbert,Central,Nooto,891,1.305767,173.02991,12,64,Low,Medium
+N Tarawa,Gilbert,Central,Buota,"1,756",1.234144,173.7359,24,138,Low,High
+S Tarawa,Gilbert,Central,Nanikai,"1,152",1.194868,172.595102,12,77,Low,Low
+S Tarawa,Gilbert,Central,Bikenibeu,"7,575",1.22086,173.7315,72,539,Low,Medium
+S Tarawa,Gilbert,Central,Betio,"17,330",1.211997,172.552919,168,"1,273",Low,High
+Abemama,Gilbert,Central,Tanimainiku,136,0.282325,173.512193,12,54,Med,Low
+Abemama,Gilbert,Central,Tebanga,252,0.21335,173.56689,24,88,Med,Medium
+Abemama,Gilbert,Central,Tabiang,551,0.29998,173.494271,24,98,Med,High
+N Tabiteuea,Gilbert,Southern,Tauma,211,-1.142449,174.47787,12,66,Med,Low
+N Tabiteuea,Gilbert,Southern,Buota,409,-1.94537,174.425953,12,71,Med,Medium
+N Tabiteuea,Gilbert,Southern,Utiroa,809,-1.124198,174.452478,24,118,Med,High
+S Tabiteuea,Gilbert,Southern,Katabanga,76,-1.301377,175.4142,12,76,High,Low
+S Tabiteuea,Gilbert,Southern,Tewai,311,-1.264201,174.04401,12,64,High,Medium
+S Tabiteuea,Gilbert,Southern,Buariki,455,-1.283397,175.31937,12,94,High,High
+Onotoa,Gilbert,Southern,Buariki,183,-1.484663,175.33714,12,55,High,Low
+Onotoa,Gilbert,Southern,Aiaki,227,-1.535679,175.365662,12,48,High,Medium
+Onotoa,Gilbert,Southern,Temao,279,-1.493213,175.33996,12,58,High,High
+Tabuaeran,Line,Northern,Aramari,274,3.492165,-159.20481,24,141,Med,Low
+Tabuaeran,Line,Northern,Tereitannano,241,3.495875,-159.204955,12,55,Med,Medium
+Tabuaeran,Line,Northern,Tereitaki,505,3.492165,-159.20481,12,63,Med,High
+Kiritimati,Line,Central,Poland,351,1.515149,-157.3385,24,161,Low,Low
+Kiritimati,Line,Central,Banana,"1,209",2.01793,-157.24721,60,314,Low,Medium
+Kiritimati,Line,Central,Tabwakea,"3,001",2.057,-157.291511,96,584,Low,High
