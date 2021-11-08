@@ -13,7 +13,7 @@ outdir <- "/Volumes/jgephart/Kiribati/Outputs"
 #datadir <- "K:/Kiribati/Data"
 #outdir <- "K:/Kiribati/Outputs"
 
-source("R_scripts/cleaning_functions.R")
+source("Data_cleaning/cleaning_functions.R")
 
 #___________________________________________________________________________________________#
 # Clean VRS data

@@ -75,7 +75,9 @@ ggplot(df_plot, aes(x = Percent_import, y = Prevalence)) +
 
 ```
 
-reefs_raw <- read.csv(file="SIDS OHI 2012-2018.csv", header=TRUE) # JE stuff down here, I dont understand "```{r, echo=FALSE}" these
+reefs_raw <- read.csv(file="SIDS OHI 2012-2018.csv", header=TRUE) # JE stuff down here, I dont understand
+
+```{r, echo=FALSE}
  
 # Clean reef data
 reefs_raw$country.code <- countrycode(reefs_raw$location_name, origin = "country.name", destination = "iso3c") # added new column with country code ID
@@ -103,3 +105,5 @@ df_plot <- df %>%
 ggplot(df_plot, aes(x = Percent_import, y = Prevalence, fill = OHI_val, color = OHI_val)) +
   geom_point() + geom_smooth(method = "lm", color = "darkred", se = TRUE) + geom_text(aes(label=country.code), size=3, hjust = -0.1) +
   theme_classic()
+
+```
